@@ -1,0 +1,60 @@
+# Minimal Artifact Keeper 1.6.2 stack for running the provider's acceptance tests.
+#
+#   docker compose -f docker-compose.test.yml up -d
+#   TF_ACC=1 \
+#     ARTIFACT_KEEPER_ENDPOINT=http://localhost:8080 \
+#     ARTIFACT_KEEPER_USERNAME=admin ARTIFACT_KEEPER_PASSWORD=admin \
+#     TF_ACC_TERRAFORM_PATH="$(command -v tofu)" \
+#     go test ./internal/provider -run TestAcc -v
+#   docker compose -f docker-compose.test.yml down -v
+#
+# The backend image tag tracks ValidatedUpstreamVersion (internal/provider/provider.go).
+name: ak-provider-acctest
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: registry
+      POSTGRES_PASSWORD: registry
+      POSTGRES_DB: artifact_registry
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U registry -d artifact_registry"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.1
+    environment:
+      discovery.type: single-node
+      OPENSEARCH_JAVA_OPTS: "-Xms256m -Xmx256m"
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 20s
+
+  backend:
+    image: ghcr.io/artifact-keeper/artifact-keeper-backend:1.6.3
+    depends_on:
+      postgres: { condition: service_healthy }
+      opensearch: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://registry:registry@postgres:5432/artifact_registry
+      OPENSEARCH_URL: http://opensearch:9200
+      JWT_SECRET: acceptance-test-jwt-secret-not-for-production-0123456789
+      ADMIN_PASSWORD: admin
+      STORAGE_PATH: /tmp/ak/storage
+      BACKUP_PATH: /tmp/ak/backups
+      PLUGINS_DIR: /tmp/ak/plugins
+      ENVIRONMENT: development
+      DEPENDENCY_TRACK_ENABLED: "false"
+      HOST: 0.0.0.0
+      PORT: 8080
+      RUST_LOG: info
+    ports:
+      - "8080:8080"

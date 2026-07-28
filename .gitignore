@@ -1,0 +1,23 @@
+# Built provider binary
+terraform-provider-artifact-keeper
+dist/
+
+# Go
+*.test
+*.out
+vendor/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+
+# Editors
+.idea/
+.vscode/
+
+# Local tooling config (may contain machine-specific paths)
+.claude/settings.local.json
