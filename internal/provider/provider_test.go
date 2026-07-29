@@ -26,8 +26,8 @@ func TestProviderSchema(t *testing.T) {
 			t.Errorf("schema diagnostic: %s, %s", d.Summary, d.Detail)
 		}
 	}
-	if got := len(resp.ResourceSchemas); got != 37 {
-		t.Errorf("resource schemas: want 37, got %d", got)
+	if got := len(resp.ResourceSchemas); got != 39 {
+		t.Errorf("resource schemas: want 39, got %d", got)
 	}
 	if got := len(resp.DataSourceSchemas); got != 3 {
 		t.Errorf("data source schemas: want 3, got %d", got)

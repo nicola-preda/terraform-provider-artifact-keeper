@@ -56,6 +56,22 @@ func listToStringSlice(ctx context.Context, l types.List) ([]string, diag.Diagno
 	return out, d
 }
 
+// optionalBool returns a *bool for a set value, or nil when null/unknown.
+func optionalBool(v types.Bool) *bool {
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+	return v.ValueBoolPointer()
+}
+
+// optionalInt64 returns a *int64 for a set value, or nil when null/unknown.
+func optionalInt64(v types.Int64) *int64 {
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+	return v.ValueInt64Pointer()
+}
+
 // mapToStringMap reads a types.Map into a Go map (nil when null/unknown).
 func mapToStringMap(ctx context.Context, m types.Map) (map[string]string, diag.Diagnostics) {
 	if m.IsNull() || m.IsUnknown() {

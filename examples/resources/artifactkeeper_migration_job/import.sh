@@ -1,0 +1,1 @@
+terraform import artifactkeeper_migration_job.myrepo_npm 6a1f0b93-2c7d-4e51-9a3f-8b0c1d2e3f40

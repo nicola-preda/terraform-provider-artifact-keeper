@@ -2,10 +2,22 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.6.3` = Artifact Keeper 1.6.3);
+the Artifact Keeper release it is validated against (`v1.6.4` = Artifact Keeper 1.6.4);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
-## [Unreleased]
+## [1.6.4] - 2026-07-29
+
+Validated against Artifact Keeper 1.6.4.
+
+### Added
+
+- `artifactkeeper_migration_job` resource: create a migration job (in `pending` state) against a
+  `migration_source`, scoped to repositories with `include_repos`. Terraform creates the job;
+  starting, pausing, and cancelling it stay manual/imperative operations. Cached remote (proxy)
+  artifacts are excluded unless `include_cached_remote` is set.
+- `artifactkeeper_plugin` resource: install a WASM plugin from a git source and manage its
+  enabled state and JSON `config`. Only git installs are modelled; zip/local uploads and reload
+  stay manual.
 
 ## [1.6.3]
 
@@ -33,5 +45,5 @@ First public release. Validated against Artifact Keeper 1.6.3.
 - 3 data sources: `repository`, `user`, `group`.
 - Import support on every resource.
 
-[Unreleased]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.3...HEAD
+[1.6.4]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/releases/tag/v1.6.3

@@ -22,7 +22,7 @@ var _ provider.Provider = (*artifactKeeperProvider)(nil)
 // been verified against. Release tags mirror the upstream MAJOR.MINOR line, with
 // PATCH as the provider's own fix counter; so this constant, not the tag, is the
 // precise record. Bump it in the same commit that re-validates against a release.
-const ValidatedUpstreamVersion = "1.6.3"
+const ValidatedUpstreamVersion = "1.6.4"
 
 type artifactKeeperProvider struct {
 	// version is set at build time and surfaced via Metadata.
@@ -155,6 +155,7 @@ func (p *artifactKeeperProvider) Resources(_ context.Context) []func() resource.
 		NewApiTokenResource,
 		NewPeerResource,
 		NewMigrationSourceResource,
+		NewMigrationJobResource,
 		NewSsoOidcResource,
 		NewSsoLdapResource,
 		NewSsoSamlResource,
@@ -188,6 +189,7 @@ func (p *artifactKeeperProvider) Resources(_ context.Context) []func() resource.
 		NewRepositorySigningConfigResource,
 		NewPeerNetworkProfileResource,
 		NewFormatHandlerResource,
+		NewPluginResource,
 	}
 }
 

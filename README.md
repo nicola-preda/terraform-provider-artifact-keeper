@@ -6,7 +6,7 @@ and policies, all driven through its REST API.
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.6.3** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.6.4** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
 
 ## Usage
@@ -16,7 +16,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.6.3"
+      version = "~> 1.6.4"
     }
   }
 }
@@ -43,7 +43,7 @@ environment: `ARTIFACT_KEEPER_TOKEN`, `ARTIFACT_KEEPER_USERNAME`, `ARTIFACT_KEEP
 
 ## Resources
 
-37 resources. See [`docs/`](docs/) for each one's schema.
+39 resources. See [`docs/`](docs/) for each one's schema.
 
 | Area | Resources |
 |---|---|
@@ -51,10 +51,10 @@ environment: `ARTIFACT_KEEPER_TOKEN`, `ARTIFACT_KEEPER_USERNAME`, `ARTIFACT_KEEP
 | Projects | `project` |
 | Identity & access | `user`, `group`, `group_membership`, `user_role_assignment`, `permission`, `service_account`, `service_account_token`, `api_token`, `repo_token` |
 | SSO & auth | `sso_oidc`, `sso_ldap`, `sso_saml`, `ci_oidc_provider`, `ci_oidc_identity_mapping` |
-| Replication & migration | `peer`, `peer_repository_subscription`, `peer_network_profile`, `remote_instance`, `sync_policy`, `migration_source` |
+| Replication & migration | `peer`, `peer_repository_subscription`, `peer_network_profile`, `remote_instance`, `sync_policy`, `migration_source`, `migration_job` |
 | Promotion & quality | `promotion_rule`, `quality_gate`, `curation_rule`, `security_policy`, `license_policy` |
 | Delivery & notifications | `webhook`, `signing_key`, `email_subscription` |
-| Instance settings | `system_settings`, `telemetry_settings`, `format_handler` |
+| Instance settings | `system_settings`, `telemetry_settings`, `format_handler`, `plugin` |
 
 Data sources: `artifactkeeper_repository` (by key), `artifactkeeper_user` and
 `artifactkeeper_group` (by UUID).
@@ -92,8 +92,8 @@ provider "artifactkeeper" {
 
 ## Versioning
 
-The provider version tracks the Artifact Keeper version it's validated against: `v1.6.3`
-targets Artifact Keeper 1.6.3. Pin with `~> 1.6.3`.
+The provider version tracks the Artifact Keeper version it's validated against: `v1.6.4`
+targets Artifact Keeper 1.6.4. Pin with `~> 1.6.4`.
 
 ## Development
 
