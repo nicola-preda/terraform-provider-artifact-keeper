@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -37,6 +38,7 @@ type migrationJobResourceModel struct {
 	IncludeRepos           types.List    `tfsdk:"include_repos"`
 	ExcludeRepos           types.List    `tfsdk:"exclude_repos"`
 	ExcludePaths           types.List    `tfsdk:"exclude_paths"`
+	RepoMappings           types.Map     `tfsdk:"repo_mappings"`
 	IncludeUsers           types.Bool    `tfsdk:"include_users"`
 	IncludeGroups          types.Bool    `tfsdk:"include_groups"`
 	IncludePermissions     types.Bool    `tfsdk:"include_permissions"`
@@ -104,6 +106,12 @@ func (r *migrationJobResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:            true,
 				MarkdownDescription: "Artifact path globs to skip.",
 				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace()},
+			},
+			"repo_mappings": schema.MapAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "Source repository key -> destination repository key rename map. Migrated artifacts land in the destination (target) repo instead of one named after the source, e.g. `{ \"network-team-python\" = \"network-pypi\" }`. Sources not listed keep their name. Pair with `include_repos` (which lists the *source* keys).",
+				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"include_users": schema.BoolAttribute{
 				Optional:            true,
@@ -200,6 +208,10 @@ func (r *migrationJobResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(d...)
 	excludePaths, d := listToStringSlice(ctx, plan.ExcludePaths)
 	resp.Diagnostics.Append(d...)
+	repoMappings := map[string]string{}
+	if !plan.RepoMappings.IsNull() && !plan.RepoMappings.IsUnknown() {
+		resp.Diagnostics.Append(plan.RepoMappings.ElementsAs(ctx, &repoMappings, false)...)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -211,6 +223,7 @@ func (r *migrationJobResource) Create(ctx context.Context, req resource.CreateRe
 			IncludeRepos:        includeRepos,
 			ExcludeRepos:        excludeRepos,
 			ExcludePaths:        excludePaths,
+			RepoMappings:        repoMappings,
 			IncludeUsers:        optionalBool(plan.IncludeUsers),
 			IncludeGroups:       optionalBool(plan.IncludeGroups),
 			IncludePermissions:  optionalBool(plan.IncludePermissions),

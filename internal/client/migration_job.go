@@ -11,20 +11,21 @@ import (
 // "skip", concurrent_transfers 4, throttle_delay_ms 100, verify_checksums true,
 // include_users/groups/permissions true).
 type MigrationConfig struct {
-	IncludeRepos        []string `json:"include_repos,omitempty"`
-	ExcludeRepos        []string `json:"exclude_repos,omitempty"`
-	ExcludePaths        []string `json:"exclude_paths,omitempty"`
-	IncludeUsers        *bool    `json:"include_users,omitempty"`
-	IncludeGroups       *bool    `json:"include_groups,omitempty"`
-	IncludePermissions  *bool    `json:"include_permissions,omitempty"`
-	IncludeCachedRemote *bool    `json:"include_cached_remote,omitempty"`
-	DryRun              *bool    `json:"dry_run,omitempty"`
-	ConflictResolution  *string  `json:"conflict_resolution,omitempty"`
-	ConcurrentTransfers *int64   `json:"concurrent_transfers,omitempty"`
-	ThrottleDelayMs     *int64   `json:"throttle_delay_ms,omitempty"`
-	VerifyChecksums     *bool    `json:"verify_checksums,omitempty"`
-	DateFrom            *string  `json:"date_from,omitempty"`
-	DateTo              *string  `json:"date_to,omitempty"`
+	IncludeRepos        []string          `json:"include_repos,omitempty"`
+	ExcludeRepos        []string          `json:"exclude_repos,omitempty"`
+	ExcludePaths        []string          `json:"exclude_paths,omitempty"`
+	RepoMappings        map[string]string `json:"repo_mappings,omitempty"`
+	IncludeUsers        *bool             `json:"include_users,omitempty"`
+	IncludeGroups       *bool             `json:"include_groups,omitempty"`
+	IncludePermissions  *bool             `json:"include_permissions,omitempty"`
+	IncludeCachedRemote *bool             `json:"include_cached_remote,omitempty"`
+	DryRun              *bool             `json:"dry_run,omitempty"`
+	ConflictResolution  *string           `json:"conflict_resolution,omitempty"`
+	ConcurrentTransfers *int64            `json:"concurrent_transfers,omitempty"`
+	ThrottleDelayMs     *int64            `json:"throttle_delay_ms,omitempty"`
+	VerifyChecksums     *bool             `json:"verify_checksums,omitempty"`
+	DateFrom            *string           `json:"date_from,omitempty"`
+	DateTo              *string           `json:"date_to,omitempty"`
 }
 
 // CreateMigrationRequest maps the POST /migrations body.

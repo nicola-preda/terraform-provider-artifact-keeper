@@ -47,6 +47,7 @@ resource "artifactkeeper_migration_job" "myrepo_npm" {
 - `include_repos` (List of String) Repository keys to migrate. Empty migrates everything the connection exposes.
 - `include_users` (Boolean) Migrate users. Defaults to `true`.
 - `job_type` (String) Job type: `full`, `incremental`, or `assessment`. Defaults to `full`.
+- `repo_mappings` (Map of String) Source repository key -> destination repository key rename map. Migrated artifacts land in the destination (target) repo instead of one named after the source, e.g. `{ "network-team-python" = "network-pypi" }`. Sources not listed keep their name. Pair with `include_repos` (which lists the *source* keys).
 - `throttle_delay_ms` (Number) Delay between transfers, in milliseconds. Defaults to `100`.
 - `verify_checksums` (Boolean) Verify transferred artifacts against source digests. Defaults to `true`.
 

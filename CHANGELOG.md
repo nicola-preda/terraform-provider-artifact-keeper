@@ -5,6 +5,16 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.7.1` = Artifact Keeper 1.7.1);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Added
+
+- `artifactkeeper_migration_job`: `repo_mappings` attribute (source repo key -> target key) to
+  rename repositories during migration. **Proton branch only, not released**: the backend
+  capability is in neither Artifact Keeper 1.7.0 nor 1.7.1, and is pending upstream as
+  [artifact-keeper#3038](https://github.com/artifact-keeper/artifact-keeper/pull/3038). It ships
+  once that lands in a released backend.
+
 ## [1.7.1] - 2026-08-07
 
 Validated against Artifact Keeper 1.7.1, with the acceptance suite run live against that
@@ -142,6 +152,7 @@ First public release. Validated against Artifact Keeper 1.6.3.
 - 3 data sources: `repository`, `user`, `group`.
 - Import support on every resource.
 
+[Unreleased]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.7.0...HEAD
 [1.7.0]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.4...v1.7.0
 [1.6.4]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/releases/tag/v1.6.3
