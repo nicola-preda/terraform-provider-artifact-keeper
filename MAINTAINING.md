@@ -75,6 +75,13 @@ Rust names (provider Go names differ where noted).
 | `migration_source` | `POST /migrations/connections`, `GET/DELETE …/{id}` | `handlers/migration.rs` | `ConnectionResponse`, `CreateConnectionRequest`, `ConnectionCredentials` |
 | `migration_job` | `POST /migrations`, `GET/DELETE …/{id}` (creates a pending job only; start/pause/cancel are imperative, not modeled) | `handlers/migration.rs` | `MigrationJobResponse`, `CreateMigrationRequest`, `MigrationConfig` |
 | `plugin` | `POST /plugins/install/git`, `GET/DELETE …/{id}`, `POST …/{id}/enable`\|`disable`\|`config` (git installs only; zip/local/reload not modelled) | `handlers/plugins.rs` | `PluginResponse`, `InstallFromGitRequest`, `PluginInstallResponse`, `UpdatePluginConfigRequest` |
+| `repository_security` | `GET/PUT /repositories/{key}/security` (per-repo scan config; upsert, no delete) | `handlers/security.rs`, `services/scan_config_service.rs` | `RepoSecurityResponse`/`ScanConfigResponse`, `UpsertScanConfigRequest` |
+| `repository_cache_ttl` | `GET/PUT /repositories/{key}/cache-ttl` | `handlers/repositories.rs` | `CacheTtlResponse`, `SetCacheTtlRequest` |
+| `repository_npm_scope_policy` | `GET/PUT /repositories/{key}/npm-scope-policy` | `handlers/repositories.rs` | `NpmScopePolicyResponse`, `SetNpmScopePolicyRequest` |
+| `repository_routing_rules` | `GET/POST/DELETE /repositories/{key}/routing-rules` (POST replaces the ordered list) | `handlers/repositories.rs`, `services/routing_rules.rs` | `RoutingRulesResponse`, `SetRoutingRulesRequest`, `RoutingRule` |
+| `repository_pypi_track` | `GET /…/pypi-tracks`, `PUT/DELETE /…/pypi-tracks/{project}` (per project) | `handlers/repositories.rs` | `PypiTrackResponse`, `PypiTracksListResponse`, `PypiTrackRequest` |
+| `repository_upstream_auth` | `PUT /repositories/{key}/upstream-auth` (write-only, no GET) | `handlers/repositories.rs` | `UpstreamAuthRequest` |
+| `repository_release_target` | `GET/PUT /promotion/repositories/{key}/release-target` | `handlers/promotion.rs` | `ReleaseTargetResponse`, `SetReleaseTargetRequest` |
 | `sso_oidc` | `POST /admin/sso/oidc`, `GET/PUT/DELETE …/{id}` | `handlers/sso_admin.rs` (routes), `services/auth_config_service.rs` (structs) | `OidcConfigResponse`, `Create/UpdateOidcConfigRequest` |
 | `sso_ldap` | `POST /admin/sso/ldap`, `GET/PUT/DELETE …/{id}` | same as OIDC | `LdapConfigResponse`, `Create/UpdateLdapConfigRequest` |
 | `sso_saml` | `POST /admin/sso/saml`, `GET/PUT/DELETE …/{id}` | same as OIDC | `SamlConfigResponse`, `Create/UpdateSamlConfigRequest` |
@@ -145,21 +152,13 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.6.x (**39 resources + 3 data sources**).
+Not bugs; scope decisions. Current as of v1.6.x (**46 resources + 3 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
-actions that aren't IaC. All whole-object manageable resources are now modelled;
-the remaining candidates are repository sub-configs and a few fields:
-
-**Repository sub-config endpoint groups** (own endpoints under `/repositories/{key}/…`;
-natural sibling `repository_*` resources, added on demand):
-
-- `cache-ttl` (`PUT/GET /cache-ttl`)
-- `npm-scope-policy` (`PUT/GET /npm-scope-policy`)
-- `pypi-tracks` (`GET/PUT/DELETE /pypi-tracks[/:project]`)
-- `routing-rules` (`GET/POST/DELETE /routing-rules`)
-- `upstream-auth` (`PUT /upstream-auth`, write-only credentials)
-- per-repo scan config (`GET/PUT /security`)
-- `release-target` (`GET/PUT /release-target`)
+actions that aren't IaC. All whole-object manageable resources are modelled, and the
+per-repository sub-config endpoints now have `repository_*` resources too
+(`repository_security`, `repository_cache_ttl`, `repository_npm_scope_policy`,
+`repository_routing_rules`, `repository_pypi_track`, `repository_upstream_auth`,
+`repository_release_target`). What's left is a few repository main-object fields:
 
 **Repository main-object fields not yet exposed:** `quarantine_enabled` /
 `quarantine_duration_minutes` (update-only), `npm_allowed_scopes` /

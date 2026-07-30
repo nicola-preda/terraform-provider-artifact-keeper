@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_release_target.staging docker-staging

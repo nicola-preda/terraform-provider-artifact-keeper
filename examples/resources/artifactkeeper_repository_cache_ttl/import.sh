@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_cache_ttl.npm_proxy npm-remote

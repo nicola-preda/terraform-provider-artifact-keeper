@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_routing_rules.npm_proxy npm-remote

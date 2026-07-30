@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_npm_scope_policy.scoped npm-remote

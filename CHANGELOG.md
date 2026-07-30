@@ -5,6 +5,20 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.6.4` = Artifact Keeper 1.6.4);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Added
+
+- `artifactkeeper_repository_security` resource: per-repository scan config
+  (`scan_enabled`, `scan_on_upload`, `scan_on_proxy`, `block_on_policy_violation`,
+  `severity_threshold`) via `PUT /repositories/{key}/security`.
+- Per-repository sub-config resources: `artifactkeeper_repository_cache_ttl` (proxy cache TTL),
+  `artifactkeeper_repository_npm_scope_policy` (npm scope allow-list),
+  `artifactkeeper_repository_routing_rules` (ordered proxy rewrite rules),
+  `artifactkeeper_repository_pypi_track` (PEP 708 tracks, per project),
+  `artifactkeeper_repository_upstream_auth` (upstream credentials; write-only, no read-back), and
+  `artifactkeeper_repository_release_target` (staging-to-release link).
+
 ## [1.6.4] - 2026-07-29
 
 Validated against Artifact Keeper 1.6.4.
@@ -45,5 +59,6 @@ First public release. Validated against Artifact Keeper 1.6.3.
 - 3 data sources: `repository`, `user`, `group`.
 - Import support on every resource.
 
+[Unreleased]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.4...HEAD
 [1.6.4]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/releases/tag/v1.6.3

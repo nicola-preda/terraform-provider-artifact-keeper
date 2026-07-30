@@ -43,11 +43,11 @@ environment: `ARTIFACT_KEEPER_TOKEN`, `ARTIFACT_KEEPER_USERNAME`, `ARTIFACT_KEEP
 
 ## Resources
 
-39 resources. See [`docs/`](docs/) for each one's schema.
+46 resources. See [`docs/`](docs/) for each one's schema.
 
 | Area | Resources |
 |---|---|
-| Repositories | `repository`, `repository_label`, `repository_signing_config`, `lifecycle_policy`, `age_gate` |
+| Repositories | `repository`, `repository_label`, `repository_signing_config`, `repository_security`, `repository_cache_ttl`, `repository_npm_scope_policy`, `repository_routing_rules`, `repository_pypi_track`, `repository_upstream_auth`, `repository_release_target`, `lifecycle_policy`, `age_gate` |
 | Projects | `project` |
 | Identity & access | `user`, `group`, `group_membership`, `user_role_assignment`, `permission`, `service_account`, `service_account_token`, `api_token`, `repo_token` |
 | SSO & auth | `sso_oidc`, `sso_ldap`, `sso_saml`, `ci_oidc_provider`, `ci_oidc_identity_mapping` |
