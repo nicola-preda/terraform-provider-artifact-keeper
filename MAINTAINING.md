@@ -39,7 +39,7 @@ not need changes unless a **consumed** endpoint/field changed.
 |---|---|
 | Validated against | **Artifact Keeper 1.7.0** (2026-07-31) |
 | Provider changes needed | additive only, no reworks (new fields + typed curation rules; see the changelog) |
-| Acceptance suite | schema-compatible with the live 1.6.x image; no consumed route/field/type changed, so it carries over |
+| Acceptance suite | run live against the 1.7.0 backend image (2026-08-03); all 12 `TestAcc` functions pass |
 
 Drop-in from the 1.6.x line: no consumed route, field, or type was removed or retyped. The
 1.7.0 diff added new *optional* fields (now modelled) and tightened some authorization checks
@@ -250,10 +250,9 @@ docker compose -f docker-compose.test.yml down -v
 without them terraform-plugin-testing registers the provider under the legacy `-`
 namespace on `registry.terraform.io`, which `tofu` rejects.
 
-The acceptance suite (now pinned to the 1.7.0 backend image) exercises the great majority
-of resources; its most recent live run was against 1.6.3, and the 1.7.0 delta is
-source-validated (no consumed route/field/type changed), so that coverage carries over
-until the suite is next run live against 1.7.0. The smoke/prereq tests create the full post-baseline set alongside
+The acceptance suite is pinned to the 1.7.0 backend image and was last run live against 1.7.0
+(2026-08-03): all 12 `TestAcc` functions pass. It exercises the great majority
+of resources. The smoke/prereq tests create the full post-baseline set alongside
 `repository`/`user`/`group`/`permission` and the data sources. `migration_job` (and, via
 it, `migration_source`) are covered too: `TestAccMigrationJobResource` creates a connection
 and a pending job, since neither needs a reachable source. Only `peer`, `sso_*`, `plugin`, and

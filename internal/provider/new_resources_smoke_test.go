@@ -101,7 +101,7 @@ resource "artifactkeeper_ci_oidc_identity_mapping" "gl_map" {
 resource "artifactkeeper_service_account_token" "ci_tok" {
   service_account_id = artifactkeeper_service_account.ci.id
   name               = "tf-acc-sa-token"
-  scopes             = ["read"]
+  scopes             = ["read:artifacts"]
 }
 
 resource "artifactkeeper_group" "grp" {
