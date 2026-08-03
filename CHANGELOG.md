@@ -2,10 +2,8 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.6.4` = Artifact Keeper 1.6.4);
+the Artifact Keeper release it is validated against (`v1.7.0` = Artifact Keeper 1.7.0);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
-
-## [Unreleased]
 
 ## [1.7.0] - 2026-07-31
 
@@ -107,7 +105,6 @@ First public release. Validated against Artifact Keeper 1.6.3.
 - 3 data sources: `repository`, `user`, `group`.
 - Import support on every resource.
 
-[Unreleased]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.7.0...HEAD
 [1.7.0]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.4...v1.7.0
 [1.6.4]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/releases/tag/v1.6.3

@@ -57,7 +57,7 @@ Cutting a release:
 
 1. Run the drift check below. Set `ValidatedUpstreamVersion` and the compatibility table
    to the AK version you validated against, in the same commit.
-2. Tag `v<that version>` (e.g. `v1.6.4`) and push it. The `release` workflow runs
+2. Tag `v<that version>` (e.g. `v1.7.0`) and push it. The `release` workflow runs
    GoReleaser, which builds the per-platform archives, `SHA256SUMS`, the GPG signature,
    and the registry manifest, and attaches them to a GitHub release.
 3. First release only: upload the GPG public key to the Terraform Registry and add the
@@ -100,21 +100,21 @@ that handler on a bump.
 
 ## How to re-check drift on a version bump
 
-When the backend moves to a new tag (say `v1.7.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above.
+When the backend moves to a new tag (say `v1.8.0`), verify the provider before
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.7.0`).
 
 ```sh
 BK=~/git/github.com/artifact-keeper/artifact-keeper
 git -C "$BK" fetch --tags
 
 # 1. Did any consumed route move? (path + HTTP method)
-git -C "$BK" diff v1.6.4 v1.7.0 -- backend/src/api/routes.rs
+git -C "$BK" diff v1.7.0 v1.8.0 -- backend/src/api/routes.rs
 
 # 2. Diff each consumed struct. Repeat per row in the map above.
-git -C "$BK" diff v1.6.4 v1.7.0 -- backend/src/api/handlers/repositories.rs
-git -C "$BK" diff v1.6.4 v1.7.0 -- backend/src/api/handlers/peers.rs
+git -C "$BK" diff v1.7.0 v1.8.0 -- backend/src/api/handlers/repositories.rs
+git -C "$BK" diff v1.7.0 v1.8.0 -- backend/src/api/handlers/peers.rs
 # … etc. Inspect a struct at the new tag with:
-git -C "$BK" grep -n 'struct RepositoryResponse' v1.7.0
+git -C "$BK" grep -n 'struct RepositoryResponse' v1.8.0
 ```
 
 **What counts as breaking** (needs a provider change), for a field the provider
@@ -226,7 +226,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.6.3 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.7.0 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh
@@ -250,14 +250,16 @@ docker compose -f docker-compose.test.yml down -v
 without them terraform-plugin-testing registers the provider under the legacy `-`
 namespace on `registry.terraform.io`, which `tofu` rejects.
 
-Coverage validated against live 1.6.3: the acceptance suite exercises the great majority
-of resources. The smoke/prereq tests create the full post-baseline set alongside
+The acceptance suite (now pinned to the 1.7.0 backend image) exercises the great majority
+of resources; its most recent live run was against 1.6.3, and the 1.7.0 delta is
+source-validated (no consumed route/field/type changed), so that coverage carries over
+until the suite is next run live against 1.7.0. The smoke/prereq tests create the full post-baseline set alongside
 `repository`/`user`/`group`/`permission` and the data sources. `migration_job` (and, via
 it, `migration_source`) are covered too: `TestAccMigrationJobResource` creates a connection
 and a pending job, since neither needs a reachable source. Only `peer`, `sso_*`, `plugin`, and
 actually *running* a migration (start / test-connection) sit outside it; they need external
 systems (a reachable peer, an IdP, an installable WASM plugin git repo, a live source
-registry) to exercise. `plugin` is source-verified against 1.6.4 (every endpoint, field, and
+registry) to exercise. `plugin` is source-verified against 1.7.0 (every endpoint, field, and
 the `active` status string checked against `handlers/plugins.rs`) plus unit-tested, but has
 not had a live end-to-end apply.
 
