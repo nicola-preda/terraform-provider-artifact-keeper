@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,10 +13,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
 )
+
+// tokenScopes is the canonical API token scope vocabulary the backend accepts
+// (token_service.rs ALLOWED_SCOPES). The mint endpoints reject anything else
+// with a 400, so the token resources validate against it at plan time.
+var tokenScopes = []string{
+	"read:artifacts", "write:artifacts", "delete:artifacts", "promote:artifacts",
+	"read:repositories", "write:repositories", "delete:repositories",
+	"read:users", "write:users", "trigger:sync", "admin", "*",
+}
 
 var (
 	_ resource.Resource                = (*apiTokenResource)(nil)
@@ -61,7 +73,8 @@ func (r *apiTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Token scopes (e.g. `[\"admin\"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `[\"read\"]`.",
+				MarkdownDescription: "Token scopes (e.g. `[\"admin\"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `[\"read:artifacts\"]`.",
+				Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.OneOf(tokenScopes...))},
 				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace(), listplanmodifier.UseStateForUnknown()},
 			},
 			"expires_in_days": schema.Int64Attribute{

@@ -8,12 +8,13 @@ import (
 
 // Group mirrors GroupResponse (extra fields like members on GET are ignored).
 type Group struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-	MemberCount int64   `json:"member_count"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Description    *string `json:"description"`
+	MemberCount    int64   `json:"member_count"`
+	ExternalSource *string `json:"external_source"`
+	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      string  `json:"updated_at"`
 }
 
 // GroupRequest is used for both create (POST) and update (PUT).

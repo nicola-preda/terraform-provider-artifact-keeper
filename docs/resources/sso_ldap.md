@@ -43,11 +43,13 @@ variable "ldap_bind_password" {
 - `admin_group_dn` (String) DN of the group mapped to admin.
 - `bind_dn` (String) Service account DN for search-then-bind.
 - `bind_password` (String, Sensitive) Password for bind_dn. Not returned by the API.
+- `ca_certificate` (String, Sensitive) PEM CA bundle used to verify the LDAP server's certificate. Write-only, the API never returns it (see `has_ca_certificate`). Set `""` to clear.
 - `display_name_attribute` (String) Defaults to `cn`.
 - `email_attribute` (String) Defaults to `mail`.
 - `group_base_dn` (String)
 - `group_filter` (String)
 - `groups_attribute` (String) Defaults to `memberOf`.
+- `insecure_skip_verify` (Boolean) Skip TLS certificate verification of the LDAP server. **Insecure**; dev/trusted networks only. Defaults to `false`.
 - `is_enabled` (Boolean) Defaults to `true`.
 - `priority` (Number) Precedence among LDAP providers. Defaults to `0`.
 - `use_starttls` (Boolean) Defaults to `false`.
@@ -58,6 +60,7 @@ variable "ldap_bind_password" {
 
 - `created_at` (String)
 - `has_bind_password` (Boolean)
+- `has_ca_certificate` (Boolean) Whether a CA certificate is configured.
 - `id` (String) The ID of this resource.
 - `updated_at` (String)
 

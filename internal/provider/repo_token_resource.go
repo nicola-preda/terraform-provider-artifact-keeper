@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
@@ -78,6 +81,7 @@ func (r *repoTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				ElementType:         types.StringType,
 				Required:            true,
 				MarkdownDescription: "Permission scopes for the token, e.g. `[\"read:artifacts\", \"write:artifacts\"]`. Admin-class scopes (`*`, `delete:artifacts`, ...) require an admin caller. Changing this forces a new token.",
+				Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.OneOf(tokenScopes...))},
 				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace()},
 			},
 			"expires_in_days": schema.Int64Attribute{

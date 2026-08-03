@@ -30,8 +30,41 @@ type Repository struct {
 	AptLabel               *string `json:"apt_label"`
 	AptReleaseVersion      *string `json:"apt_release_version"`
 	AptDescription         *string `json:"apt_description"`
-	CreatedAt              string  `json:"created_at"`
-	UpdatedAt              string  `json:"updated_at"`
+	// Quarantine hold (#1770): nil when unset (global default applies).
+	QuarantineEnabled         *bool  `json:"quarantine_enabled"`
+	QuarantineDurationMinutes *int64 `json:"quarantine_duration_minutes"`
+	// Curation enforcement on this repo's proxy paths (#2912). Stored on the
+	// repositories row, so always present.
+	CurationEnabled       bool   `json:"curation_enabled"`
+	CurationDefaultAction string `json:"curation_default_action"`
+	// Allowed npm full-name glob patterns for an npm remote (#2424). The scope
+	// allow-list itself is managed by the repository_npm_scope_policy resource;
+	// only the name-pattern list is reachable via the repository object.
+	NpmAllowedNamePatterns []string      `json:"npm_allowed_name_patterns"`
+	Debian                 *DebianConfig `json:"debian"`
+	CreatedAt              string        `json:"created_at"`
+	UpdatedAt              string        `json:"updated_at"`
+}
+
+// DebianConfig is the Debian remote (proxy) distribution/component/architecture
+// filter (#2460), stored under `debian_config`. Empty lists (or `["*"]`) proxy
+// everything. Only meaningful for Debian remote repositories. On update the
+// whole object is sent as a patch, which the backend merges over the stored
+// config, so sending every field makes it authoritative (a full replace).
+type DebianConfig struct {
+	DistributionPaths      []string `json:"distribution_paths"`
+	Components             []string `json:"components"`
+	Architectures          []string `json:"architectures"`
+	IncludeSourcePackages  bool     `json:"include_source_packages"`
+	FlatRepository         bool     `json:"flat_repository"`
+	VerifyUpstreamMetadata bool     `json:"verify_upstream_metadata"`
+	UpstreamGpgKeyID       *string  `json:"upstream_gpg_key_id,omitempty"`
+	// Enum strings; omitempty so an unset value falls back to the server default
+	// (`upstream_passthrough`) rather than failing to parse an empty string.
+	MetadataStrategy       string   `json:"metadata_strategy,omitempty"`
+	PackageFetchStrategy   string   `json:"package_fetch_strategy,omitempty"`
+	PackageQueries         []string `json:"package_queries"`
+	AllowEncodedSeparators bool     `json:"allow_encoded_separators"`
 }
 
 // CreateRepositoryRequest maps CreateRepositoryRequest. Only the fields the
@@ -54,10 +87,15 @@ type CreateRepositoryRequest struct {
 	CustomUserAgent       *string `json:"custom_user_agent,omitempty"`
 	ProjectID             *string `json:"project_id,omitempty"`
 	TrustedGpgKey         *string `json:"trusted_gpg_key,omitempty"`
-	AptOrigin             *string `json:"apt_origin,omitempty"`
-	AptLabel              *string `json:"apt_label,omitempty"`
-	AptReleaseVersion     *string `json:"apt_release_version,omitempty"`
-	AptDescription        *string `json:"apt_description,omitempty"`
+	// Opt into ingesting unverified upstream metadata on the keyless RPM
+	// curation-sync path (#2569). Write-only; not echoed in the response.
+	CurationAllowUnverified *bool         `json:"curation_allow_unverified,omitempty"`
+	NpmAllowedNamePatterns  []string      `json:"npm_allowed_name_patterns,omitempty"`
+	Debian                  *DebianConfig `json:"debian,omitempty"`
+	AptOrigin               *string       `json:"apt_origin,omitempty"`
+	AptLabel                *string       `json:"apt_label,omitempty"`
+	AptReleaseVersion       *string       `json:"apt_release_version,omitempty"`
+	AptDescription          *string       `json:"apt_description,omitempty"`
 }
 
 // UpdateRepositoryRequest maps the mutable subset of UpdateRepositoryRequest
@@ -74,10 +112,21 @@ type UpdateRepositoryRequest struct {
 	CustomUserAgent       *string `json:"custom_user_agent,omitempty"`
 	ProjectID             *string `json:"project_id,omitempty"`
 	TrustedGpgKey         *string `json:"trusted_gpg_key,omitempty"`
-	AptOrigin             *string `json:"apt_origin,omitempty"`
-	AptLabel              *string `json:"apt_label,omitempty"`
-	AptReleaseVersion     *string `json:"apt_release_version,omitempty"`
-	AptDescription        *string `json:"apt_description,omitempty"`
+	// Update-only settable fields (not accepted on create; set with a follow-up
+	// PATCH). All echoed back in the response, so they round-trip.
+	QuarantineEnabled         *bool    `json:"quarantine_enabled,omitempty"`
+	QuarantineDurationMinutes *int64   `json:"quarantine_duration_minutes,omitempty"`
+	CurationAllowUnverified   *bool    `json:"curation_allow_unverified,omitempty"`
+	CurationEnabled           *bool    `json:"curation_enabled,omitempty"`
+	CurationDefaultAction     *string  `json:"curation_default_action,omitempty"`
+	NpmAllowedNamePatterns    []string `json:"npm_allowed_name_patterns,omitempty"`
+	// Whole object sent as a patch; the backend merges it over the stored
+	// config, so sending every field makes it authoritative.
+	Debian            *DebianConfig `json:"debian,omitempty"`
+	AptOrigin         *string       `json:"apt_origin,omitempty"`
+	AptLabel          *string       `json:"apt_label,omitempty"`
+	AptReleaseVersion *string       `json:"apt_release_version,omitempty"`
+	AptDescription    *string       `json:"apt_description,omitempty"`
 }
 
 func (c *Client) CreateRepository(ctx context.Context, req CreateRepositoryRequest) (*Repository, error) {

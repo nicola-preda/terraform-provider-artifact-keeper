@@ -9,34 +9,41 @@ import (
 // OidcConfig mirrors OidcConfigResponse. client_secret is never returned;
 // has_secret indicates whether one is set.
 type OidcConfig struct {
-	ID                string            `json:"id"`
-	Name              string            `json:"name"`
-	IssuerURL         string            `json:"issuer_url"`
-	ClientID          string            `json:"client_id"`
-	HasSecret         bool              `json:"has_secret"`
-	Scopes            []string          `json:"scopes"`
-	AttributeMapping  map[string]string `json:"attribute_mapping"`
-	IsEnabled         bool              `json:"is_enabled"`
-	AutoCreateUsers   bool              `json:"auto_create_users"`
-	PkceEnabled       bool              `json:"pkce_enabled"`
-	MapGroupsToGroups bool              `json:"map_groups_to_groups"`
-	CreatedAt         string            `json:"created_at"`
-	UpdatedAt         string            `json:"updated_at"`
+	ID                 string            `json:"id"`
+	Name               string            `json:"name"`
+	IssuerURL          string            `json:"issuer_url"`
+	ClientID           string            `json:"client_id"`
+	HasSecret          bool              `json:"has_secret"`
+	Scopes             []string          `json:"scopes"`
+	AttributeMapping   map[string]string `json:"attribute_mapping"`
+	IsEnabled          bool              `json:"is_enabled"`
+	AutoCreateUsers    bool              `json:"auto_create_users"`
+	PkceEnabled        bool              `json:"pkce_enabled"`
+	MapGroupsToGroups  bool              `json:"map_groups_to_groups"`
+	AllowLegacyRsaKeys bool              `json:"allow_legacy_rsa_keys"`
+	CreatedAt          string            `json:"created_at"`
+	UpdatedAt          string            `json:"updated_at"`
 }
 
 // OidcConfigRequest is used for both create (POST) and update (PUT). Pointers
 // distinguish "omit" from "set to zero value".
 type OidcConfigRequest struct {
-	Name              *string           `json:"name,omitempty"`
-	IssuerURL         *string           `json:"issuer_url,omitempty"`
-	ClientID          *string           `json:"client_id,omitempty"`
-	ClientSecret      *string           `json:"client_secret,omitempty"`
-	Scopes            []string          `json:"scopes,omitempty"`
-	AttributeMapping  map[string]string `json:"attribute_mapping,omitempty"`
-	IsEnabled         *bool             `json:"is_enabled,omitempty"`
-	AutoCreateUsers   *bool             `json:"auto_create_users,omitempty"`
-	PkceEnabled       *bool             `json:"pkce_enabled,omitempty"`
-	MapGroupsToGroups *bool             `json:"map_groups_to_groups,omitempty"`
+	Name               *string           `json:"name,omitempty"`
+	IssuerURL          *string           `json:"issuer_url,omitempty"`
+	ClientID           *string           `json:"client_id,omitempty"`
+	ClientSecret       *string           `json:"client_secret,omitempty"`
+	Scopes             []string          `json:"scopes,omitempty"`
+	AttributeMapping   map[string]string `json:"attribute_mapping,omitempty"`
+	IsEnabled          *bool             `json:"is_enabled,omitempty"`
+	AutoCreateUsers    *bool             `json:"auto_create_users,omitempty"`
+	PkceEnabled        *bool             `json:"pkce_enabled,omitempty"`
+	MapGroupsToGroups  *bool             `json:"map_groups_to_groups,omitempty"`
+	AllowLegacyRsaKeys *bool             `json:"allow_legacy_rsa_keys,omitempty"`
+	// AttributeMappingReplace, when true, makes the update PUT replace the whole
+	// attribute_mapping instead of merging. Update-only; not returned. The
+	// resource sets it whenever it sends attribute_mapping, so the declared map
+	// stays authoritative (a merge would leave removed keys behind).
+	AttributeMappingReplace *bool `json:"attribute_mapping_replace,omitempty"`
 }
 
 func (c *Client) CreateOidcConfig(ctx context.Context, req OidcConfigRequest) (*OidcConfig, error) {

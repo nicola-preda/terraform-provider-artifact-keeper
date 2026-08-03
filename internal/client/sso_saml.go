@@ -21,6 +21,8 @@ type SamlConfig struct {
 	RequireSignedAssertions bool              `json:"require_signed_assertions"`
 	AdminGroup              *string           `json:"admin_group"`
 	IsEnabled               bool              `json:"is_enabled"`
+	UseAbsoluteAcsURL       bool              `json:"use_absolute_acs_url"`
+	MapGroupsToGroups       bool              `json:"map_groups_to_groups"`
 	CreatedAt               string            `json:"created_at"`
 	UpdatedAt               string            `json:"updated_at"`
 }
@@ -39,6 +41,8 @@ type SamlConfigRequest struct {
 	RequireSignedAssertions *bool             `json:"require_signed_assertions,omitempty"`
 	AdminGroup              *string           `json:"admin_group,omitempty"`
 	IsEnabled               *bool             `json:"is_enabled,omitempty"`
+	UseAbsoluteAcsURL       *bool             `json:"use_absolute_acs_url,omitempty"`
+	MapGroupsToGroups       *bool             `json:"map_groups_to_groups,omitempty"`
 }
 
 func (c *Client) CreateSamlConfig(ctx context.Context, req SamlConfigRequest) (*SamlConfig, error) {

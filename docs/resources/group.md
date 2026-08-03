@@ -33,6 +33,7 @@ resource "artifactkeeper_group" "platform" {
 ### Read-Only
 
 - `created_at` (String)
+- `external_source` (String) SSO provider that owns this group (`oidc`, `saml`, or `ldap`), or null for a locally-managed group. Membership of an SSO-owned group cannot be managed with `artifactkeeper_group_membership`: the backend returns 409 for those groups.
 - `id` (String) The ID of this resource.
 - `member_count` (Number)
 - `updated_at` (String)

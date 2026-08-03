@@ -33,7 +33,11 @@ data "artifactkeeper_repository" "docker" {
 - `apt_origin` (String) Custom APT Release Origin, if set.
 - `apt_release_version` (String) Custom APT Release Version, if set.
 - `created_at` (String)
+- `curation_allow_unverified` (Boolean) Write-only; never returned by the API.
+- `curation_default_action` (String) Curation stance when no rule matches (`allow` or `review`).
+- `curation_enabled` (Boolean) Whether curation-rule enforcement is on for this repository.
 - `custom_user_agent` (String) Custom outbound User-Agent, if set.
+- `debian` (Attributes) Debian remote proxy filter, if set. (see [below for nested schema](#nestedatt--debian))
 - `description` (String)
 - `format` (String)
 - `format_key` (String) Write-only; not returned by the API.
@@ -43,9 +47,12 @@ data "artifactkeeper_repository" "docker" {
 - `is_public` (Boolean)
 - `members` (List of String) For `virtual` repositories: ordered member repository keys. Null for non-virtual repositories.
 - `name` (String)
+- `npm_allowed_name_patterns` (List of String) Allowed npm full-name glob patterns, if set.
 - `project_id` (String) UUID of the assigned project, if any.
 - `promotion_only` (Boolean) Whether direct uploads are rejected (promotion-only).
 - `pypi_upstream_index_path` (String) Write-only; not returned by the API.
+- `quarantine_duration_minutes` (Number) Quarantine hold duration in minutes, if set.
+- `quarantine_enabled` (Boolean) Whether the quarantine hold is enabled, if set.
 - `quota_bytes` (Number)
 - `repo_type` (String)
 - `storage_backend` (String) Write-only; not returned by the API.
@@ -56,3 +63,20 @@ data "artifactkeeper_repository" "docker" {
 - `upstream_auth_type` (String)
 - `upstream_url` (String)
 - `versioning_enabled` (Boolean) Whether first-class artifact versioning is enabled.
+
+<a id="nestedatt--debian"></a>
+### Nested Schema for `debian`
+
+Read-Only:
+
+- `allow_encoded_separators` (Boolean)
+- `architectures` (List of String)
+- `components` (List of String)
+- `distribution_paths` (List of String)
+- `flat_repository` (Boolean)
+- `include_source_packages` (Boolean)
+- `metadata_strategy` (String)
+- `package_fetch_strategy` (String)
+- `package_queries` (List of String)
+- `upstream_gpg_key_id` (String)
+- `verify_upstream_metadata` (Boolean)

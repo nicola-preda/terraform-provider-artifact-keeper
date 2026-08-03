@@ -17,8 +17,12 @@ type RepositorySecurity struct {
 	ScanOnProxy            bool   `json:"scan_on_proxy"`
 	BlockOnPolicyViolation bool   `json:"block_on_policy_violation"`
 	SeverityThreshold      string `json:"severity_threshold"`
-	CreatedAt              string `json:"created_at"`
-	UpdatedAt              string `json:"updated_at"`
+	// Fail-open vs fail-closed for the inline proxy scan-on-fetch (#2954):
+	// "fail_open" (default) serves the artifact if the scan cannot run,
+	// "fail_closed" refuses it.
+	ProxyScanAction string `json:"proxy_scan_action"`
+	CreatedAt       string `json:"created_at"`
+	UpdatedAt       string `json:"updated_at"`
 }
 
 // repoSecurityEnvelope wraps the GET body ({config, score}); only config is
@@ -35,6 +39,7 @@ type UpdateRepositorySecurityRequest struct {
 	ScanOnProxy            *bool   `json:"scan_on_proxy,omitempty"`
 	BlockOnPolicyViolation *bool   `json:"block_on_policy_violation,omitempty"`
 	SeverityThreshold      *string `json:"severity_threshold,omitempty"`
+	ProxyScanAction        *string `json:"proxy_scan_action,omitempty"`
 }
 
 // GetRepositorySecurity reads GET /repositories/{key}/security and returns its

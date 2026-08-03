@@ -17,5 +17,19 @@ resource "artifactkeeper_curation_rule" "allow_nginx" {
   enabled            = true
 }
 
+# A typed "popularity" rule: block low-download and typosquatting packages.
+resource "artifactkeeper_curation_rule" "popularity_gate" {
+  staging_repo_id = artifactkeeper_repository.rpm_staging.id
+  package_pattern = "*"
+  action          = "review"
+  reason          = "Quarantine unpopular or typosquatting packages for review."
+  rule_type       = "popularity"
+  config = jsonencode({
+    min_downloads   = 1000
+    typosquat_check = true
+    action          = "review"
+  })
+}
+
 # Import an existing curation rule by its UUID:
 #   terraform import artifactkeeper_curation_rule.allow_nginx 550e8400-e29b-41d4-a716-446655440000

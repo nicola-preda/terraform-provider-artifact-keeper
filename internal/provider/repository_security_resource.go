@@ -39,6 +39,7 @@ type repositorySecurityResourceModel struct {
 	ScanOnProxy            types.Bool   `tfsdk:"scan_on_proxy"`
 	BlockOnPolicyViolation types.Bool   `tfsdk:"block_on_policy_violation"`
 	SeverityThreshold      types.String `tfsdk:"severity_threshold"`
+	ProxyScanAction        types.String `tfsdk:"proxy_scan_action"`
 	CreatedAt              types.String `tfsdk:"created_at"`
 	UpdatedAt              types.String `tfsdk:"updated_at"`
 }
@@ -93,8 +94,15 @@ func (r *repositorySecurityResource) Schema(_ context.Context, _ resource.Schema
 			"severity_threshold": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum finding severity that trips the gate: one of `critical`, `high`, `medium`, `low`.",
-				Validators:          []validator.String{stringvalidator.OneOf("critical", "high", "medium", "low")},
+				MarkdownDescription: "Minimum finding severity that trips the gate: one of `critical`, `high`, `medium`, `low`, `info`.",
+				Validators:          []validator.String{stringvalidator.OneOf("critical", "high", "medium", "low", "info")},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"proxy_scan_action": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Behavior when an inline proxy scan-on-fetch cannot run: `fail_open` (default, serve the artifact anyway) or `fail_closed` (refuse it).",
+				Validators:          []validator.String{stringvalidator.OneOf("fail_open", "fail_closed")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{
@@ -199,6 +207,7 @@ func securityRequestFromModel(m repositorySecurityResourceModel) client.UpdateRe
 		ScanOnProxy:            optionalBool(m.ScanOnProxy),
 		BlockOnPolicyViolation: optionalBool(m.BlockOnPolicyViolation),
 		SeverityThreshold:      optionalString(m.SeverityThreshold),
+		ProxyScanAction:        optionalString(m.ProxyScanAction),
 	}
 }
 
@@ -212,6 +221,7 @@ func securityToModel(repoKey string, c *client.RepositorySecurity) repositorySec
 		ScanOnProxy:            types.BoolValue(c.ScanOnProxy),
 		BlockOnPolicyViolation: types.BoolValue(c.BlockOnPolicyViolation),
 		SeverityThreshold:      types.StringValue(c.SeverityThreshold),
+		ProxyScanAction:        types.StringValue(c.ProxyScanAction),
 		CreatedAt:              types.StringValue(c.CreatedAt),
 		UpdatedAt:              types.StringValue(c.UpdatedAt),
 	}

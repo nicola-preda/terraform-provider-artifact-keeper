@@ -32,6 +32,20 @@ resource "artifactkeeper_curation_rule" "allow_nginx" {
   enabled            = true
 }
 
+# A typed "popularity" rule: block low-download and typosquatting packages.
+resource "artifactkeeper_curation_rule" "popularity_gate" {
+  staging_repo_id = artifactkeeper_repository.rpm_staging.id
+  package_pattern = "*"
+  action          = "review"
+  reason          = "Quarantine unpopular or typosquatting packages for review."
+  rule_type       = "popularity"
+  config = jsonencode({
+    min_downloads   = 1000
+    typosquat_check = true
+    action          = "review"
+  })
+}
+
 # Import an existing curation rule by its UUID:
 #   terraform import artifactkeeper_curation_rule.allow_nginx 550e8400-e29b-41d4-a716-446655440000
 ```
@@ -48,8 +62,11 @@ resource "artifactkeeper_curation_rule" "allow_nginx" {
 ### Optional
 
 - `architecture` (String) Architecture the rule applies to. Defaults to `*` (any architecture).
+- `config` (String) Engine parameters as a JSON object string (use `jsonencode(...)`). Ignored by `pattern` rules. `publisher_trust` reads `trusted_publishers`, `match`, `action`; `popularity` reads `min_downloads`, `typosquat_check`, `max_distance`, `action`, `block_unknown`, `block_typosquat`, `homoglyph_check`, `affix_max_downloads`. Defaults to `{}`.
 - `enabled` (Boolean) Whether the rule is active. Defaults to `true`.
 - `priority` (Number) Rule priority; lower numbers are evaluated first. Defaults to `100`.
+- `rule_type` (String) Evaluation engine: `pattern` (glob match on `package_pattern`, the default), `publisher_trust` (allow-list of trusted publishers), or `popularity` (download-count and typosquat signals). The `publisher_trust` and `popularity` engines read their parameters from `config`.
+- `scope` (String) Rule scope: `repository` (default; requires `staging_repo_id`) or `global` (instance-wide baseline; `staging_repo_id` must be omitted). Immutable, changing it forces a new rule.
 - `staging_repo_id` (String) UUID of the staging repository this rule applies to. Omit for a global rule that applies to every repository. Changing this forces a new rule.
 - `version_constraint` (String) Version constraint the rule applies to. Defaults to `*` (any version).
 

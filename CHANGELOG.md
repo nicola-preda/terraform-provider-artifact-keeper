@@ -7,17 +7,56 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-31
+
+Validated against Artifact Keeper 1.7.0. No consumed route, field, or type was removed or
+retyped, so the provider is drop-in from 1.6.x; this release adds the new settable surface and
+closes several long-standing coverage gaps.
+
 ### Added
 
-- `artifactkeeper_repository_security` resource: per-repository scan config
-  (`scan_enabled`, `scan_on_upload`, `scan_on_proxy`, `block_on_policy_violation`,
-  `severity_threshold`) via `PUT /repositories/{key}/security`.
-- Per-repository sub-config resources: `artifactkeeper_repository_cache_ttl` (proxy cache TTL),
+- Per-repository sub-config resources: `artifactkeeper_repository_security` (scan config:
+  `scan_enabled`, `scan_on_upload`, `scan_on_proxy`, `block_on_policy_violation`,
+  `severity_threshold`), `artifactkeeper_repository_cache_ttl` (proxy cache TTL),
   `artifactkeeper_repository_npm_scope_policy` (npm scope allow-list),
   `artifactkeeper_repository_routing_rules` (ordered proxy rewrite rules),
   `artifactkeeper_repository_pypi_track` (PEP 708 tracks, per project),
   `artifactkeeper_repository_upstream_auth` (upstream credentials; write-only, no read-back), and
   `artifactkeeper_repository_release_target` (staging-to-release link).
+- `artifactkeeper_repository`: `curation_enabled` and `curation_default_action` (curation-rule
+  enforcement on proxy paths), `curation_allow_unverified` (keyless RPM curation-sync opt-in,
+  write-only), `quarantine_enabled` / `quarantine_duration_minutes` (upload quarantine hold),
+  `npm_allowed_name_patterns` (npm glob allow-list), and a nested `debian` block (remote proxy
+  distribution/component/architecture filter).
+- `artifactkeeper_curation_rule`: typed rules via `rule_type` (`pattern`, `publisher_trust`,
+  `popularity`), a JSON `config` for the engine parameters, and `scope` (`repository` / `global`).
+- `artifactkeeper_repository_security`: `proxy_scan_action` (`fail_open` / `fail_closed`);
+  `severity_threshold` now also accepts `info`.
+- `artifactkeeper_sso_oidc`: `allow_legacy_rsa_keys`. `artifactkeeper_sso_ldap`:
+  `insecure_skip_verify`, `ca_certificate` (write-only) / `has_ca_certificate`.
+  `artifactkeeper_sso_saml`: `use_absolute_acs_url`, `map_groups_to_groups`.
+- `artifactkeeper_group` (resource and data source): computed `external_source` (the SSO provider
+  that owns the group, or null for a local group).
+- Client-side scope-vocabulary validation on `artifactkeeper_api_token`,
+  `artifactkeeper_service_account_token`, and `artifactkeeper_repo_token`, so an invalid scope
+  fails at plan time rather than as a 400 at apply (the backend now enforces the vocabulary).
+
+### Changed
+
+- `artifactkeeper_group_membership` now reads all members (pages past the first 50).
+- `artifactkeeper_sso_oidc` sends `attribute_mapping` authoritatively on update (removed keys are
+  now deleted rather than merged).
+- Corrected the `artifactkeeper_api_token` default-scope docs (`read` -> `read:artifacts`).
+
+### Upgrade notes (Artifact Keeper 1.7.0 behavior changes)
+
+- `artifactkeeper_migration_source` and `artifactkeeper_migration_job` now require an **admin**
+  token: the `/migrations` API is admin-gated (was any authenticated user).
+- Several per-repository writes now require repo-**admin** (repo `write` no longer suffices):
+  `artifactkeeper_repository_security`, `_repository_routing_rules`, `_repository_pypi_track`,
+  `_repository_upstream_auth`.
+- `artifactkeeper_group_membership` cannot manage SSO-owned groups (the API returns 409); the new
+  `external_source` attribute identifies them.
 
 ## [1.6.4] - 2026-07-29
 
@@ -59,6 +98,7 @@ First public release. Validated against Artifact Keeper 1.6.3.
 - 3 data sources: `repository`, `user`, `group`.
 - Import support on every resource.
 
-[Unreleased]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.4...HEAD
+[Unreleased]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.4...v1.7.0
 [1.6.4]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/nicola-preda/terraform-provider-artifact-keeper/releases/tag/v1.6.3

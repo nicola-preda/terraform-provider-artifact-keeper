@@ -22,7 +22,7 @@ var _ provider.Provider = (*artifactKeeperProvider)(nil)
 // been verified against. Release tags mirror the upstream MAJOR.MINOR line, with
 // PATCH as the provider's own fix counter; so this constant, not the tag, is the
 // precise record. Bump it in the same commit that re-validates against a release.
-const ValidatedUpstreamVersion = "1.6.4"
+const ValidatedUpstreamVersion = "1.7.0"
 
 type artifactKeeperProvider struct {
 	// version is set at build time and surfaced via Metadata.

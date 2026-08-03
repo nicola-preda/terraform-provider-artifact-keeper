@@ -31,6 +31,7 @@ data "artifactkeeper_group" "platform" {
 
 - `created_at` (String)
 - `description` (String)
+- `external_source` (String) SSO provider that owns this group (`oidc`, `saml`, or `ldap`), or null for a locally-managed group.
 - `member_count` (Number)
 - `name` (String)
 - `updated_at` (String)

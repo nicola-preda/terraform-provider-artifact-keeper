@@ -117,6 +117,12 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	}
 
 	u := *c.baseURL
+	// A "?query" suffix in path sets the URL query (callers pre-escape values);
+	// paths without one are unaffected.
+	if i := strings.IndexByte(path, '?'); i >= 0 {
+		u.RawQuery = path[i+1:]
+		path = path[:i]
+	}
 	u.Path += path
 
 	var lastErr error

@@ -30,20 +30,21 @@ type ssoOidcResource struct {
 }
 
 type ssoOidcResourceModel struct {
-	ID                types.String `tfsdk:"id"`
-	Name              types.String `tfsdk:"name"`
-	IssuerURL         types.String `tfsdk:"issuer_url"`
-	ClientID          types.String `tfsdk:"client_id"`
-	ClientSecret      types.String `tfsdk:"client_secret"`
-	Scopes            types.List   `tfsdk:"scopes"`
-	AttributeMapping  types.Map    `tfsdk:"attribute_mapping"`
-	IsEnabled         types.Bool   `tfsdk:"is_enabled"`
-	AutoCreateUsers   types.Bool   `tfsdk:"auto_create_users"`
-	PkceEnabled       types.Bool   `tfsdk:"pkce_enabled"`
-	MapGroupsToGroups types.Bool   `tfsdk:"map_groups_to_groups"`
-	HasSecret         types.Bool   `tfsdk:"has_secret"`
-	CreatedAt         types.String `tfsdk:"created_at"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
+	ID                 types.String `tfsdk:"id"`
+	Name               types.String `tfsdk:"name"`
+	IssuerURL          types.String `tfsdk:"issuer_url"`
+	ClientID           types.String `tfsdk:"client_id"`
+	ClientSecret       types.String `tfsdk:"client_secret"`
+	Scopes             types.List   `tfsdk:"scopes"`
+	AttributeMapping   types.Map    `tfsdk:"attribute_mapping"`
+	IsEnabled          types.Bool   `tfsdk:"is_enabled"`
+	AutoCreateUsers    types.Bool   `tfsdk:"auto_create_users"`
+	PkceEnabled        types.Bool   `tfsdk:"pkce_enabled"`
+	MapGroupsToGroups  types.Bool   `tfsdk:"map_groups_to_groups"`
+	AllowLegacyRsaKeys types.Bool   `tfsdk:"allow_legacy_rsa_keys"`
+	HasSecret          types.Bool   `tfsdk:"has_secret"`
+	CreatedAt          types.String `tfsdk:"created_at"`
+	UpdatedAt          types.String `tfsdk:"updated_at"`
 }
 
 func (r *ssoOidcResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -96,11 +97,12 @@ func (r *ssoOidcResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "Claim mapping overrides (e.g. `username_claim`, `email_claim`, `groups_claim`, `admin_group`).",
 				PlanModifiers:       []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 			},
-			"is_enabled":           boolDefaulted("Whether the provider is enabled. Defaults to `true`."),
-			"auto_create_users":    boolDefaulted("Auto-create users on first login. Defaults to `true`."),
-			"pkce_enabled":         boolDefaulted("Enable PKCE (S256). Defaults to `true`."),
-			"map_groups_to_groups": boolDefaulted("Sync OIDC groups to Artifact Keeper groups. Defaults to `false`."),
-			"has_secret":           schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether a client secret is configured."},
+			"is_enabled":            boolDefaulted("Whether the provider is enabled. Defaults to `true`."),
+			"auto_create_users":     boolDefaulted("Auto-create users on first login. Defaults to `true`."),
+			"pkce_enabled":          boolDefaulted("Enable PKCE (S256). Defaults to `true`."),
+			"map_groups_to_groups":  boolDefaulted("Sync OIDC groups to Artifact Keeper groups. Defaults to `false`."),
+			"allow_legacy_rsa_keys": boolDefaulted("Accept legacy RSA signing keys from the IdP (RSA-SHA1). Defaults to `false`; enable only for an IdP that cannot issue modern keys."),
+			"has_secret":            schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether a client secret is configured."},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -174,6 +176,13 @@ func (r *ssoOidcResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// The plan carries the full desired attribute_mapping, so it must be
+	// authoritative: replace rather than merge, or keys removed from config
+	// would linger server-side. Only when we're actually sending the map.
+	if apiReq.AttributeMapping != nil {
+		replace := true
+		apiReq.AttributeMappingReplace = &replace
+	}
 
 	cfg, err := r.client.UpdateOidcConfig(ctx, plan.ID.ValueString(), apiReq)
 	if err != nil {
@@ -229,6 +238,9 @@ func oidcRequestFromModel(ctx context.Context, m ssoOidcResourceModel) (client.O
 	if !m.MapGroupsToGroups.IsNull() && !m.MapGroupsToGroups.IsUnknown() {
 		req.MapGroupsToGroups = m.MapGroupsToGroups.ValueBoolPointer()
 	}
+	if !m.AllowLegacyRsaKeys.IsNull() && !m.AllowLegacyRsaKeys.IsUnknown() {
+		req.AllowLegacyRsaKeys = m.AllowLegacyRsaKeys.ValueBoolPointer()
+	}
 	return req, diags
 }
 
@@ -240,18 +252,19 @@ func oidcToModel(ctx context.Context, c *client.OidcConfig) (ssoOidcResourceMode
 	diags.Append(d...)
 
 	return ssoOidcResourceModel{
-		ID:                types.StringValue(c.ID),
-		Name:              types.StringValue(c.Name),
-		IssuerURL:         types.StringValue(c.IssuerURL),
-		ClientID:          types.StringValue(c.ClientID),
-		Scopes:            scopes,
-		AttributeMapping:  mapping,
-		IsEnabled:         types.BoolValue(c.IsEnabled),
-		AutoCreateUsers:   types.BoolValue(c.AutoCreateUsers),
-		PkceEnabled:       types.BoolValue(c.PkceEnabled),
-		MapGroupsToGroups: types.BoolValue(c.MapGroupsToGroups),
-		HasSecret:         types.BoolValue(c.HasSecret),
-		CreatedAt:         types.StringValue(c.CreatedAt),
-		UpdatedAt:         types.StringValue(c.UpdatedAt),
+		ID:                 types.StringValue(c.ID),
+		Name:               types.StringValue(c.Name),
+		IssuerURL:          types.StringValue(c.IssuerURL),
+		ClientID:           types.StringValue(c.ClientID),
+		Scopes:             scopes,
+		AttributeMapping:   mapping,
+		IsEnabled:          types.BoolValue(c.IsEnabled),
+		AutoCreateUsers:    types.BoolValue(c.AutoCreateUsers),
+		PkceEnabled:        types.BoolValue(c.PkceEnabled),
+		MapGroupsToGroups:  types.BoolValue(c.MapGroupsToGroups),
+		AllowLegacyRsaKeys: types.BoolValue(c.AllowLegacyRsaKeys),
+		HasSecret:          types.BoolValue(c.HasSecret),
+		CreatedAt:          types.StringValue(c.CreatedAt),
+		UpdatedAt:          types.StringValue(c.UpdatedAt),
 	}, diags
 }

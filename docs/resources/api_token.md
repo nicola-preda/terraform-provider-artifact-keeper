@@ -36,7 +36,7 @@ output "ci_token" {
 ### Optional
 
 - `expires_in_days` (Number) Days until expiry (1-365). Omit for a non-expiring token.
-- `scopes` (List of String) Token scopes (e.g. `["admin"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `["read"]`.
+- `scopes` (List of String) Token scopes (e.g. `["admin"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `["read:artifacts"]`.
 
 ### Read-Only
 

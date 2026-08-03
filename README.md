@@ -6,7 +6,7 @@ and policies, all driven through its REST API.
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.6.4** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.7.0** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
 
 ## Usage
@@ -16,7 +16,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.6.4"
+      version = "~> 1.7.0"
     }
   }
 }
@@ -59,9 +59,9 @@ environment: `ARTIFACT_KEEPER_TOKEN`, `ARTIFACT_KEEPER_USERNAME`, `ARTIFACT_KEEP
 Data sources: `artifactkeeper_repository` (by key), `artifactkeeper_user` and
 `artifactkeeper_group` (by UUID).
 
-Not modelled yet: a few repository sub-configs (cache-TTL, routing-rules, npm-scope-policy,
-pypi-tracks, upstream-auth) and some format-specific fields. MAINTAINING.md has the exact
-boundary.
+Nearly every setting configurable through the API/UI is modelled. The remaining gaps are
+narrow: admin minting of a token for another user, and format-specific package fields.
+MAINTAINING.md has the exact boundary.
 
 ## Gotchas
 
@@ -92,8 +92,8 @@ provider "artifactkeeper" {
 
 ## Versioning
 
-The provider version tracks the Artifact Keeper version it's validated against: `v1.6.4`
-targets Artifact Keeper 1.6.4. Pin with `~> 1.6.4`.
+The provider version tracks the Artifact Keeper version it's validated against: `v1.7.0`
+targets Artifact Keeper 1.7.0. Pin with `~> 1.7.0`.
 
 ## Development
 

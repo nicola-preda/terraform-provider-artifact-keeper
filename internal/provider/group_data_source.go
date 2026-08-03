@@ -22,12 +22,13 @@ type groupDataSource struct {
 }
 
 type groupDataSourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	MemberCount types.Int64  `tfsdk:"member_count"`
-	CreatedAt   types.String `tfsdk:"created_at"`
-	UpdatedAt   types.String `tfsdk:"updated_at"`
+	ID             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Description    types.String `tfsdk:"description"`
+	MemberCount    types.Int64  `tfsdk:"member_count"`
+	ExternalSource types.String `tfsdk:"external_source"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	UpdatedAt      types.String `tfsdk:"updated_at"`
 }
 
 func (d *groupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -42,8 +43,12 @@ func (d *groupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			"name":         dschema.StringAttribute{Computed: true},
 			"description":  dschema.StringAttribute{Computed: true},
 			"member_count": dschema.Int64Attribute{Computed: true},
-			"created_at":   dschema.StringAttribute{Computed: true},
-			"updated_at":   dschema.StringAttribute{Computed: true},
+			"external_source": dschema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "SSO provider that owns this group (`oidc`, `saml`, or `ldap`), or null for a locally-managed group.",
+			},
+			"created_at": dschema.StringAttribute{Computed: true},
+			"updated_at": dschema.StringAttribute{Computed: true},
 		},
 	}
 }
@@ -64,11 +69,12 @@ func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, groupDataSourceModel{
-		ID:          types.StringValue(g.ID),
-		Name:        types.StringValue(g.Name),
-		Description: stringPointerValue(g.Description),
-		MemberCount: types.Int64Value(g.MemberCount),
-		CreatedAt:   types.StringValue(g.CreatedAt),
-		UpdatedAt:   types.StringValue(g.UpdatedAt),
+		ID:             types.StringValue(g.ID),
+		Name:           types.StringValue(g.Name),
+		Description:    stringPointerValue(g.Description),
+		MemberCount:    types.Int64Value(g.MemberCount),
+		ExternalSource: stringPointerValue(g.ExternalSource),
+		CreatedAt:      types.StringValue(g.CreatedAt),
+		UpdatedAt:      types.StringValue(g.UpdatedAt),
 	})...)
 }

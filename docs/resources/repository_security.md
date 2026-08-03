@@ -35,10 +35,11 @@ resource "artifactkeeper_repository_security" "scanned" {
 ### Optional
 
 - `block_on_policy_violation` (Boolean) Block serving/promotion of artifacts that violate the security policy.
+- `proxy_scan_action` (String) Behavior when an inline proxy scan-on-fetch cannot run: `fail_open` (default, serve the artifact anyway) or `fail_closed` (refuse it).
 - `scan_enabled` (Boolean) Whether vulnerability scanning is enabled for the repository.
 - `scan_on_proxy` (Boolean) Scan artifacts fetched through a proxy (remote repositories).
 - `scan_on_upload` (Boolean) Scan artifacts when they are uploaded (hosted repositories).
-- `severity_threshold` (String) Minimum finding severity that trips the gate: one of `critical`, `high`, `medium`, `low`.
+- `severity_threshold` (String) Minimum finding severity that trips the gate: one of `critical`, `high`, `medium`, `low`, `info`.
 
 ### Read-Only
 

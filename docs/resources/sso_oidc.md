@@ -42,6 +42,7 @@ variable "oidc_client_secret" {
 
 ### Optional
 
+- `allow_legacy_rsa_keys` (Boolean) Accept legacy RSA signing keys from the IdP (RSA-SHA1). Defaults to `false`; enable only for an IdP that cannot issue modern keys.
 - `attribute_mapping` (Map of String) Claim mapping overrides (e.g. `username_claim`, `email_claim`, `groups_claim`, `admin_group`).
 - `auto_create_users` (Boolean) Auto-create users on first login. Defaults to `true`.
 - `is_enabled` (Boolean) Whether the provider is enabled. Defaults to `true`.

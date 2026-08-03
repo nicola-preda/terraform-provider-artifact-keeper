@@ -43,6 +43,9 @@ type ssoLdapResourceModel struct {
 	GroupsAttribute      types.String `tfsdk:"groups_attribute"`
 	AdminGroupDN         types.String `tfsdk:"admin_group_dn"`
 	UseStartTLS          types.Bool   `tfsdk:"use_starttls"`
+	InsecureSkipVerify   types.Bool   `tfsdk:"insecure_skip_verify"`
+	CaCertificate        types.String `tfsdk:"ca_certificate"`
+	HasCaCertificate     types.Bool   `tfsdk:"has_ca_certificate"`
 	IsEnabled            types.Bool   `tfsdk:"is_enabled"`
 	Priority             types.Int64  `tfsdk:"priority"`
 	HasBindPassword      types.Bool   `tfsdk:"has_bind_password"`
@@ -77,6 +80,9 @@ func (r *ssoLdapResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"groups_attribute":       optComputedStr("Defaults to `memberOf`."),
 			"admin_group_dn":         schema.StringAttribute{Optional: true, MarkdownDescription: "DN of the group mapped to admin."},
 			"use_starttls":           schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
+			"insecure_skip_verify":   schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Skip TLS certificate verification of the LDAP server. **Insecure**; dev/trusted networks only. Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
+			"ca_certificate":         schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "PEM CA bundle used to verify the LDAP server's certificate. Write-only, the API never returns it (see `has_ca_certificate`). Set `\"\"` to clear."},
+			"has_ca_certificate":     schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether a CA certificate is configured."},
 			"is_enabled":             schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `true`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
 			"priority":               schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "Precedence among LDAP providers. Defaults to `0`.", PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}},
 			"has_bind_password":      schema.BoolAttribute{Computed: true},
@@ -103,6 +109,7 @@ func (r *ssoLdapResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	state := ldapToModel(cfg)
 	state.BindPassword = plan.BindPassword
+	state.CaCertificate = plan.CaCertificate
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -123,6 +130,7 @@ func (r *ssoLdapResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	refreshed := ldapToModel(cfg)
 	refreshed.BindPassword = state.BindPassword
+	refreshed.CaCertificate = state.CaCertificate
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
@@ -139,6 +147,7 @@ func (r *ssoLdapResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	state := ldapToModel(cfg)
 	state.BindPassword = plan.BindPassword
+	state.CaCertificate = plan.CaCertificate
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -173,8 +182,12 @@ func ldapRequestFromModel(m ssoLdapResourceModel) client.LdapConfigRequest {
 	req.UsernameAttribute = optionalString(m.UsernameAttribute)
 	req.GroupsAttribute = optionalString(m.GroupsAttribute)
 	req.AdminGroupDN = optionalString(m.AdminGroupDN)
+	req.CaCertificate = optionalString(m.CaCertificate)
 	if !m.UseStartTLS.IsNull() && !m.UseStartTLS.IsUnknown() {
 		req.UseStartTLS = m.UseStartTLS.ValueBoolPointer()
+	}
+	if !m.InsecureSkipVerify.IsNull() && !m.InsecureSkipVerify.IsUnknown() {
+		req.InsecureSkipVerify = m.InsecureSkipVerify.ValueBoolPointer()
 	}
 	if !m.IsEnabled.IsNull() && !m.IsEnabled.IsUnknown() {
 		req.IsEnabled = m.IsEnabled.ValueBoolPointer()
@@ -201,6 +214,8 @@ func ldapToModel(c *client.LdapConfig) ssoLdapResourceModel {
 		GroupsAttribute:      types.StringValue(c.GroupsAttribute),
 		AdminGroupDN:         stringPointerValue(c.AdminGroupDN),
 		UseStartTLS:          types.BoolValue(c.UseStartTLS),
+		InsecureSkipVerify:   types.BoolValue(c.InsecureSkipVerify),
+		HasCaCertificate:     types.BoolValue(c.HasCaCertificate),
 		IsEnabled:            types.BoolValue(c.IsEnabled),
 		Priority:             types.Int64Value(c.Priority),
 		HasBindPassword:      types.BoolValue(c.HasBindPassword),

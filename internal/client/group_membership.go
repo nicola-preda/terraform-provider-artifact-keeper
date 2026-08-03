@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -42,15 +43,26 @@ func (c *Client) RemoveGroupMember(ctx context.Context, groupID, userID string) 
 	return c.do(ctx, http.MethodDelete, "/groups/"+url.PathEscape(groupID)+"/members", body, nil)
 }
 
-// ListGroupMembers returns a group's members via GET /groups/{id} (404 if gone).
-// Only the first page is read (server default 50); pagination isn't wired up, so
-// members past 50 won't surface.
+// ListGroupMembers returns all of a group's members via GET /groups/{id}
+// (404 if gone), paging through with member_limit/member_offset until
+// members_total is reached (the server caps member_limit at 200).
 func (c *Client) ListGroupMembers(ctx context.Context, groupID string) ([]GroupMember, error) {
-	var out groupMembersEnvelope
-	if err := c.do(ctx, http.MethodGet, "/groups/"+url.PathEscape(groupID), nil, &out); err != nil {
-		return nil, err
+	const pageSize = 200
+	var all []GroupMember
+	for offset := 0; ; offset += pageSize {
+		var out groupMembersEnvelope
+		path := fmt.Sprintf("/groups/%s?member_limit=%d&member_offset=%d", url.PathEscape(groupID), pageSize, offset)
+		if err := c.do(ctx, http.MethodGet, path, nil, &out); err != nil {
+			return nil, err
+		}
+		all = append(all, out.Members...)
+		// Stop once we have them all, or defensively if a page comes back empty
+		// (guards against a stale members_total).
+		if int64(len(all)) >= out.MembersTotal || len(out.Members) == 0 {
+			break
+		}
 	}
-	return out.Members, nil
+	return all, nil
 }
 
 // GetGroupMember confirms the (groupID, userID) edge. No single-membership GET,

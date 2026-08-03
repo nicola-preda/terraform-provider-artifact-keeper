@@ -37,11 +37,13 @@ resource "artifactkeeper_sso_saml" "okta" {
 - `admin_group` (String) Group mapped to admin.
 - `attribute_mapping` (Map of String) SAML attribute mapping (`username_claim`, `email_claim`, `display_name_claim`, `groups_claim`).
 - `is_enabled` (Boolean) Defaults to `true`.
+- `map_groups_to_groups` (Boolean) Sync SAML groups to Artifact Keeper groups. Defaults to `false`.
 - `name_id_format` (String) Defaults to the emailAddress NameID format.
 - `require_signed_assertions` (Boolean) Require signed assertions. Defaults to `true`.
 - `sign_requests` (Boolean) Sign AuthnRequests. Defaults to `false`.
 - `slo_url` (String) IdP single-logout URL.
 - `sp_entity_id` (String) Service Provider entity ID. Defaults to `artifact-keeper`.
+- `use_absolute_acs_url` (Boolean) Advertise an absolute AssertionConsumerService URL in SP metadata/AuthnRequests (needed behind a reverse proxy that rewrites the host). Defaults to `false`.
 
 ### Read-Only
 

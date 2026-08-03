@@ -23,6 +23,8 @@ type LdapConfig struct {
 	GroupsAttribute      string  `json:"groups_attribute"`
 	AdminGroupDN         *string `json:"admin_group_dn"`
 	UseStartTLS          bool    `json:"use_starttls"`
+	InsecureSkipVerify   bool    `json:"insecure_skip_verify"`
+	HasCaCertificate     bool    `json:"has_ca_certificate"`
 	IsEnabled            bool    `json:"is_enabled"`
 	Priority             int64   `json:"priority"`
 	CreatedAt            string  `json:"created_at"`
@@ -45,8 +47,14 @@ type LdapConfigRequest struct {
 	GroupsAttribute      *string `json:"groups_attribute,omitempty"`
 	AdminGroupDN         *string `json:"admin_group_dn,omitempty"`
 	UseStartTLS          *bool   `json:"use_starttls,omitempty"`
-	IsEnabled            *bool   `json:"is_enabled,omitempty"`
-	Priority             *int64  `json:"priority,omitempty"`
+	// InsecureSkipVerify disables TLS certificate verification of the LDAP server.
+	InsecureSkipVerify *bool `json:"insecure_skip_verify,omitempty"`
+	// CaCertificate is a PEM CA bundle used to verify the LDAP server. Write-only,
+	// never returned (the response exposes only has_ca_certificate). Send an empty
+	// string to clear it.
+	CaCertificate *string `json:"ca_certificate,omitempty"`
+	IsEnabled     *bool   `json:"is_enabled,omitempty"`
+	Priority      *int64  `json:"priority,omitempty"`
 }
 
 func (c *Client) CreateLdapConfig(ctx context.Context, req LdapConfigRequest) (*LdapConfig, error) {

@@ -59,11 +59,34 @@ func (d *repositoryDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"apt_release_version": dschema.StringAttribute{Computed: true, MarkdownDescription: "Custom APT Release Version, if set."},
 			"apt_description":     dschema.StringAttribute{Computed: true, MarkdownDescription: "Custom APT Release Description, if set."},
 			// Write-only on the resource; never returned by the API, so always null here.
-			"trusted_gpg_key":          dschema.StringAttribute{Computed: true, Sensitive: true, MarkdownDescription: "Write-only; never returned (see `has_trusted_gpg_key`)."},
-			"storage_backend":          dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
-			"format_key":               dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
-			"index_upstream_url":       dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
-			"pypi_upstream_index_path": dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
+			"trusted_gpg_key":             dschema.StringAttribute{Computed: true, Sensitive: true, MarkdownDescription: "Write-only; never returned (see `has_trusted_gpg_key`)."},
+			"storage_backend":             dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
+			"format_key":                  dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
+			"index_upstream_url":          dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
+			"pypi_upstream_index_path":    dschema.StringAttribute{Computed: true, MarkdownDescription: "Write-only; not returned by the API."},
+			"quarantine_enabled":          dschema.BoolAttribute{Computed: true, MarkdownDescription: "Whether the quarantine hold is enabled, if set."},
+			"quarantine_duration_minutes": dschema.Int64Attribute{Computed: true, MarkdownDescription: "Quarantine hold duration in minutes, if set."},
+			"curation_enabled":            dschema.BoolAttribute{Computed: true, MarkdownDescription: "Whether curation-rule enforcement is on for this repository."},
+			"curation_default_action":     dschema.StringAttribute{Computed: true, MarkdownDescription: "Curation stance when no rule matches (`allow` or `review`)."},
+			"curation_allow_unverified":   dschema.BoolAttribute{Computed: true, MarkdownDescription: "Write-only; never returned by the API."},
+			"npm_allowed_name_patterns":   dschema.ListAttribute{Computed: true, ElementType: types.StringType, MarkdownDescription: "Allowed npm full-name glob patterns, if set."},
+			"debian": dschema.SingleNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Debian remote proxy filter, if set.",
+				Attributes: map[string]dschema.Attribute{
+					"distribution_paths":       dschema.ListAttribute{Computed: true, ElementType: types.StringType},
+					"components":               dschema.ListAttribute{Computed: true, ElementType: types.StringType},
+					"architectures":            dschema.ListAttribute{Computed: true, ElementType: types.StringType},
+					"include_source_packages":  dschema.BoolAttribute{Computed: true},
+					"flat_repository":          dschema.BoolAttribute{Computed: true},
+					"verify_upstream_metadata": dschema.BoolAttribute{Computed: true},
+					"upstream_gpg_key_id":      dschema.StringAttribute{Computed: true},
+					"metadata_strategy":        dschema.StringAttribute{Computed: true},
+					"package_fetch_strategy":   dschema.StringAttribute{Computed: true},
+					"package_queries":          dschema.ListAttribute{Computed: true, ElementType: types.StringType},
+					"allow_encoded_separators": dschema.BoolAttribute{Computed: true},
+				},
+			},
 		},
 	}
 }
@@ -84,7 +107,11 @@ func (d *repositoryDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 	// repositoryResourceModel matches this data source's schema, so reuse the mapper.
-	model := repositoryToModel(repo)
+	model, diags := repositoryToModel(ctx, repo)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	if repo.RepoType == "virtual" {
 		members, err := d.client.GetVirtualMembers(ctx, repo.Key)
 		if err != nil {

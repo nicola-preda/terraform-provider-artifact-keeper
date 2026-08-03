@@ -37,19 +37,20 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.6.4** (2026-07-29) |
-| Provider changes needed | none |
-| Acceptance suite | green against the live 1.6.3 image; 1.6.4 is API-identical (only the openapi version string changed), so it carries over |
+| Validated against | **Artifact Keeper 1.7.0** (2026-07-31) |
+| Provider changes needed | additive only, no reworks (new fields + typed curation rules; see the changelog) |
+| Acceptance suite | schema-compatible with the live 1.6.x image; no consumed route/field/type changed, so it carries over |
 
-Drop-in across the 1.6.x line: no consumed route, field, or type has changed. Re-check
-each backend bump with the procedure below. Two runtime tightenings apply (see Caveats).
+Drop-in from the 1.6.x line: no consumed route, field, or type was removed or retyped. The
+1.7.0 diff added new *optional* fields (now modelled) and tightened some authorization checks
+at runtime (see Caveats). Re-check each backend bump with the procedure below.
 
 ## Versioning & releasing
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.6.4` (AK 1.6.4); consumers pin
-`~> 1.6.4`. A provider-only fix that keeps the same validated AK version is rare; if one
+(`internal/provider/provider.go`). This release is `v1.7.0` (AK 1.7.0); consumers pin
+`~> 1.7.0`. A provider-only fix that keeps the same validated AK version is rare; if one
 is needed, bump the patch ahead of AK and note it in the changelog.
 
 Cutting a release:
@@ -149,34 +150,54 @@ For a big jump, fan the per-row diffs out across parallel workers.
 - **api_token Read treats expired-but-listed tokens as gone** (the list endpoint
   filters only `revoked_at IS NULL`). See the doc comment in
   `internal/client/api_token.go` and `api_token_test.go`.
+- **Migration is admin-only (1.7.0, #2603).** The `/migrations` nest moved from
+  `auth_middleware` to `admin_middleware`, so `migration_source` and
+  `migration_job` now need a global-admin token. Schemas are unchanged; a
+  non-admin token that worked in 1.6.x now 403s on these two resources.
+- **Per-repo config writes need repo-admin (1.7.0).** `update_repo_security`,
+  `set_routing_rules`/`delete_routing_rules`, `put_pypi_track`/`delete_pypi_track`
+  and `set_upstream_auth` now call `require_repo_admin` in addition to
+  `require_repo_write_access`; repo `write` no longer suffices. No effect for a
+  global-admin or repo-admin token (the usual IaC posture).
+- **Token scope vocabulary enforced at mint (1.7.0, #2996).** `generate_api_token`
+  now runs `validate_scopes_pure`, so `api_token`/`service_account_token` reject
+  non-canonical scopes (bare `read`/`write`/…) that 1.6.x accepted. The provider
+  validates the same list client-side (`tokenScopes` in `api_token_resource.go`),
+  so a bad scope fails at plan time. The omitted-scopes default is now
+  `read:artifacts`.
+- **group_membership can't manage SSO-owned groups (1.7.0, #2874).** Add/remove
+  members 409s when the group has an `external_source` (`oidc`/`saml`/`ldap`). The
+  new computed `group.external_source` attribute surfaces the owner; only local
+  groups are membership-manageable from Terraform.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.6.x (**46 resources + 3 data sources**).
+Not bugs; scope decisions. Current as of v1.7.0 (**46 resources + 3 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
-actions that aren't IaC. All whole-object manageable resources are modelled, and the
-per-repository sub-config endpoints now have `repository_*` resources too
+actions that aren't IaC. All whole-object manageable resources are modelled, the
+per-repository sub-config endpoints have `repository_*` resources
 (`repository_security`, `repository_cache_ttl`, `repository_npm_scope_policy`,
 `repository_routing_rules`, `repository_pypi_track`, `repository_upstream_auth`,
-`repository_release_target`). What's left is a few repository main-object fields:
+`repository_release_target`), and the v1.7.0 pass closed the remaining main-object
+fields and the SSO gaps. What's left is narrow:
 
-**Repository main-object fields not yet exposed:** `quarantine_enabled` /
-`quarantine_duration_minutes` (update-only), `npm_allowed_scopes` /
-`npm_allow_unscoped` / `npm_allowed_name_patterns`, `debian` (proxy filter),
-`release_repository_key`, upstream basic/bearer auth (username/password on create).
-(`promotion_only`, `versioning_enabled`, `project_id`, `trusted_gpg_key`,
-`custom_user_agent`, `apt_*`, `storage_backend`, `format_key`, `index_upstream_url`,
-`pypi_upstream_index_path` and virtual-repo `members` are now modelled.)
+**Closed in v1.7.0:** repository `quarantine_enabled`/`quarantine_duration_minutes`,
+`curation_enabled`/`curation_default_action`/`curation_allow_unverified`, and the nested
+`debian` proxy filter; the SSO `allow_legacy_rsa_keys` (OIDC),
+`insecure_skip_verify`/`ca_certificate` (LDAP), `use_absolute_acs_url`/`map_groups_to_groups`
+(SAML) fields; `group_membership` now reads all members (paged); typed `curation_rule`
+(`rule_type`/`config`/`scope`). (`release_repository_key` is managed by
+`repository_release_target`, and `npm_allowed_scopes`/`npm_allow_unscoped` by
+`repository_npm_scope_policy`, so they're intentionally not duplicated on the main object.
+`npm_allowed_name_patterns`, which that sub-resource does *not* cover, is modelled on the
+repository object.)
 
-**Other partials:**
+**Still not exposed (narrow):**
 
 - `api_token`: self tokens only (`/profile/access-tokens`); admin minting for
   another user (`/users/:id/tokens`) isn't covered.
-- `group_membership` Read pages only the first 50 members (the shared HTTP client
-  can't pass query params yet; extend `client.do` for full pagination).
-- SSO: `allow_legacy_rsa_keys` (OIDC); `insecure_skip_verify`/`ca_certificate`
-  (LDAP); `use_absolute_acs_url`/`map_groups_to_groups` (SAML; inconsistent, since
-  OIDC exposes `map_groups_to_groups`).
+- Create-time upstream basic/bearer auth on the repository object (covered instead by the
+  `repository_upstream_auth` resource, which upserts the same credentials).
 
 **Correctly excluded (not IaC):** imperative actions (approval, quarantine, plugin
 install, promotion/migration runs, CI token exchange), read-only/monitoring

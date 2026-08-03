@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -70,6 +71,21 @@ func optionalInt64(v types.Int64) *int64 {
 		return nil
 	}
 	return v.ValueInt64Pointer()
+}
+
+// canonicalJSON reparses a JSON document into a stable form (object keys sorted,
+// insignificant whitespace removed) so semantically-equal JSON compares equal in
+// state and doesn't churn the plan. Returns an error if s isn't valid JSON.
+func canonicalJSON(s string) (string, error) {
+	var v any
+	if err := json.Unmarshal([]byte(s), &v); err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 // mapToStringMap reads a types.Map into a Go map (nil when null/unknown).

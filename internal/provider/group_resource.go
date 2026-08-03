@@ -26,12 +26,13 @@ type groupResource struct {
 }
 
 type groupResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	MemberCount types.Int64  `tfsdk:"member_count"`
-	CreatedAt   types.String `tfsdk:"created_at"`
-	UpdatedAt   types.String `tfsdk:"updated_at"`
+	ID             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Description    types.String `tfsdk:"description"`
+	MemberCount    types.Int64  `tfsdk:"member_count"`
+	ExternalSource types.String `tfsdk:"external_source"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	UpdatedAt      types.String `tfsdk:"updated_at"`
 }
 
 func (r *groupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -46,8 +47,12 @@ func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"name":         schema.StringAttribute{Required: true, MarkdownDescription: "Unique group name."},
 			"description":  schema.StringAttribute{Optional: true},
 			"member_count": schema.Int64Attribute{Computed: true},
-			"created_at":   schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
-			"updated_at":   schema.StringAttribute{Computed: true},
+			"external_source": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "SSO provider that owns this group (`oidc`, `saml`, or `ldap`), or null for a locally-managed group. Membership of an SSO-owned group cannot be managed with `artifactkeeper_group_membership`: the backend returns 409 for those groups.",
+			},
+			"created_at": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+			"updated_at": schema.StringAttribute{Computed: true},
 		},
 	}
 }
@@ -119,11 +124,12 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 
 func groupToModel(g *client.Group) groupResourceModel {
 	return groupResourceModel{
-		ID:          types.StringValue(g.ID),
-		Name:        types.StringValue(g.Name),
-		Description: stringPointerValue(g.Description),
-		MemberCount: types.Int64Value(g.MemberCount),
-		CreatedAt:   types.StringValue(g.CreatedAt),
-		UpdatedAt:   types.StringValue(g.UpdatedAt),
+		ID:             types.StringValue(g.ID),
+		Name:           types.StringValue(g.Name),
+		Description:    stringPointerValue(g.Description),
+		MemberCount:    types.Int64Value(g.MemberCount),
+		ExternalSource: stringPointerValue(g.ExternalSource),
+		CreatedAt:      types.StringValue(g.CreatedAt),
+		UpdatedAt:      types.StringValue(g.UpdatedAt),
 	}
 }

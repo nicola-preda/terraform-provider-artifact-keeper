@@ -5,14 +5,20 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
 )
@@ -32,36 +38,73 @@ type repositoryResource struct {
 }
 
 type repositoryResourceModel struct {
-	ID                     types.String `tfsdk:"id"`
-	Key                    types.String `tfsdk:"key"`
-	Name                   types.String `tfsdk:"name"`
-	Description            types.String `tfsdk:"description"`
-	Format                 types.String `tfsdk:"format"`
-	RepoType               types.String `tfsdk:"repo_type"`
-	IsPublic               types.Bool   `tfsdk:"is_public"`
-	AllowAnonymousAccess   types.Bool   `tfsdk:"allow_anonymous_access"`
-	StorageUsedBytes       types.Int64  `tfsdk:"storage_used_bytes"`
-	QuotaBytes             types.Int64  `tfsdk:"quota_bytes"`
-	UpstreamURL            types.String `tfsdk:"upstream_url"`
-	UpstreamAuthType       types.String `tfsdk:"upstream_auth_type"`
-	UpstreamAuthConfigured types.Bool   `tfsdk:"upstream_auth_configured"`
-	CreatedAt              types.String `tfsdk:"created_at"`
-	UpdatedAt              types.String `tfsdk:"updated_at"`
-	Members                types.List   `tfsdk:"members"`
-	PromotionOnly          types.Bool   `tfsdk:"promotion_only"`
-	VersioningEnabled      types.Bool   `tfsdk:"versioning_enabled"`
-	ProjectID              types.String `tfsdk:"project_id"`
-	HasTrustedGpgKey       types.Bool   `tfsdk:"has_trusted_gpg_key"`
-	TrustedGpgKey          types.String `tfsdk:"trusted_gpg_key"`
-	CustomUserAgent        types.String `tfsdk:"custom_user_agent"`
-	StorageBackend         types.String `tfsdk:"storage_backend"`
-	FormatKey              types.String `tfsdk:"format_key"`
-	IndexUpstreamURL       types.String `tfsdk:"index_upstream_url"`
-	PypiUpstreamIndexPath  types.String `tfsdk:"pypi_upstream_index_path"`
-	AptOrigin              types.String `tfsdk:"apt_origin"`
-	AptLabel               types.String `tfsdk:"apt_label"`
-	AptReleaseVersion      types.String `tfsdk:"apt_release_version"`
-	AptDescription         types.String `tfsdk:"apt_description"`
+	ID                        types.String `tfsdk:"id"`
+	Key                       types.String `tfsdk:"key"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Format                    types.String `tfsdk:"format"`
+	RepoType                  types.String `tfsdk:"repo_type"`
+	IsPublic                  types.Bool   `tfsdk:"is_public"`
+	AllowAnonymousAccess      types.Bool   `tfsdk:"allow_anonymous_access"`
+	StorageUsedBytes          types.Int64  `tfsdk:"storage_used_bytes"`
+	QuotaBytes                types.Int64  `tfsdk:"quota_bytes"`
+	UpstreamURL               types.String `tfsdk:"upstream_url"`
+	UpstreamAuthType          types.String `tfsdk:"upstream_auth_type"`
+	UpstreamAuthConfigured    types.Bool   `tfsdk:"upstream_auth_configured"`
+	CreatedAt                 types.String `tfsdk:"created_at"`
+	UpdatedAt                 types.String `tfsdk:"updated_at"`
+	Members                   types.List   `tfsdk:"members"`
+	PromotionOnly             types.Bool   `tfsdk:"promotion_only"`
+	VersioningEnabled         types.Bool   `tfsdk:"versioning_enabled"`
+	ProjectID                 types.String `tfsdk:"project_id"`
+	HasTrustedGpgKey          types.Bool   `tfsdk:"has_trusted_gpg_key"`
+	TrustedGpgKey             types.String `tfsdk:"trusted_gpg_key"`
+	CustomUserAgent           types.String `tfsdk:"custom_user_agent"`
+	StorageBackend            types.String `tfsdk:"storage_backend"`
+	FormatKey                 types.String `tfsdk:"format_key"`
+	IndexUpstreamURL          types.String `tfsdk:"index_upstream_url"`
+	PypiUpstreamIndexPath     types.String `tfsdk:"pypi_upstream_index_path"`
+	AptOrigin                 types.String `tfsdk:"apt_origin"`
+	AptLabel                  types.String `tfsdk:"apt_label"`
+	AptReleaseVersion         types.String `tfsdk:"apt_release_version"`
+	AptDescription            types.String `tfsdk:"apt_description"`
+	QuarantineEnabled         types.Bool   `tfsdk:"quarantine_enabled"`
+	QuarantineDurationMinutes types.Int64  `tfsdk:"quarantine_duration_minutes"`
+	CurationEnabled           types.Bool   `tfsdk:"curation_enabled"`
+	CurationDefaultAction     types.String `tfsdk:"curation_default_action"`
+	CurationAllowUnverified   types.Bool   `tfsdk:"curation_allow_unverified"`
+	NpmAllowedNamePatterns    types.List   `tfsdk:"npm_allowed_name_patterns"`
+	Debian                    types.Object `tfsdk:"debian"`
+}
+
+// debianConfigModel maps the nested `debian` block (the Debian remote proxy
+// filter). Mirrors client.DebianConfig field-for-field.
+type debianConfigModel struct {
+	DistributionPaths      types.List   `tfsdk:"distribution_paths"`
+	Components             types.List   `tfsdk:"components"`
+	Architectures          types.List   `tfsdk:"architectures"`
+	IncludeSourcePackages  types.Bool   `tfsdk:"include_source_packages"`
+	FlatRepository         types.Bool   `tfsdk:"flat_repository"`
+	VerifyUpstreamMetadata types.Bool   `tfsdk:"verify_upstream_metadata"`
+	UpstreamGpgKeyID       types.String `tfsdk:"upstream_gpg_key_id"`
+	MetadataStrategy       types.String `tfsdk:"metadata_strategy"`
+	PackageFetchStrategy   types.String `tfsdk:"package_fetch_strategy"`
+	PackageQueries         types.List   `tfsdk:"package_queries"`
+	AllowEncodedSeparators types.Bool   `tfsdk:"allow_encoded_separators"`
+}
+
+var debianAttrTypes = map[string]attr.Type{
+	"distribution_paths":       types.ListType{ElemType: types.StringType},
+	"components":               types.ListType{ElemType: types.StringType},
+	"architectures":            types.ListType{ElemType: types.StringType},
+	"include_source_packages":  types.BoolType,
+	"flat_repository":          types.BoolType,
+	"verify_upstream_metadata": types.BoolType,
+	"upstream_gpg_key_id":      types.StringType,
+	"metadata_strategy":        types.StringType,
+	"package_fetch_strategy":   types.StringType,
+	"package_queries":          types.ListType{ElemType: types.StringType},
+	"allow_encoded_separators": types.BoolType,
 }
 
 func (r *repositoryResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -208,6 +251,120 @@ func (r *repositoryResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				MarkdownDescription: "Custom format key for a WASM plugin format handler (e.g. `rpm-custom`). Changing this forces a new repository.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"quarantine_enabled": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Hold newly uploaded artifacts in quarantine until they are scanned. Defaults to the instance-wide setting when unset.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"quarantine_duration_minutes": schema.Int64Attribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Quarantine hold duration in minutes. Only meaningful when `quarantine_enabled` is true.",
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
+			},
+			"curation_enabled": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Enforce curation rules on this repository's proxy paths (blocks downloads that fail curation). Defaults to `false`.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"curation_default_action": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Stance applied when no curation rule matches: `allow` or `review`. (`block` is rejected; use block rules for specific packages.)",
+				Validators:          []validator.String{stringvalidator.OneOf("allow", "review")},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"curation_allow_unverified": schema.BoolAttribute{
+				Optional:            true,
+				MarkdownDescription: "Opt into ingesting unverified upstream metadata on the keyless RPM curation-sync path. Omit or `false` for the fail-closed default. Write-only, the API never returns it.",
+			},
+			"npm_allowed_name_patterns": schema.ListAttribute{
+				Optional:            true,
+				Computed:            true,
+				ElementType:         types.StringType,
+				MarkdownDescription: "Allowed npm full-name glob patterns (`*`/`?`) for an npm `remote` repository, e.g. `@acme/*` or `internal-*`. Additive to the scope allow-list managed by `artifactkeeper_repository_npm_scope_policy`.",
+				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"debian": schema.SingleNestedAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Debian remote (proxy) distribution/component/architecture filter. Only valid for Debian `remote` repositories. Empty or `[\"*\"]` lists proxy everything. Unset fields keep the server default; once the block is set, widen it by setting empty lists rather than dropping the block.",
+				PlanModifiers:       []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+				Attributes: map[string]schema.Attribute{
+					"distribution_paths": schema.ListAttribute{
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.StringType,
+						MarkdownDescription: "Distributions (suites/codenames, e.g. `bookworm`) to proxy. Empty or `[\"*\"]` = all.",
+						PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+					},
+					"components": schema.ListAttribute{
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.StringType,
+						MarkdownDescription: "Components (e.g. `main`, `contrib`, `non-free`) to proxy. Empty or `[\"*\"]` = all.",
+						PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+					},
+					"architectures": schema.ListAttribute{
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.StringType,
+						MarkdownDescription: "Architectures (e.g. `amd64`, `arm64`) to proxy. Empty or `[\"*\"]` = all; `all` is always permitted.",
+						PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+					},
+					"include_source_packages": schema.BoolAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Whether source packages (`Sources`, `.dsc`) are proxied.",
+						PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+					"flat_repository": schema.BoolAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Flat (non-`dists/`) repository layout flag.",
+						PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+					"verify_upstream_metadata": schema.BoolAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Verify the upstream signed `Release` before serving (reserved for later trust-anchor verification).",
+						PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+					"upstream_gpg_key_id": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Upstream GPG key id used to verify upstream metadata.",
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"metadata_strategy": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Metadata production strategy (e.g. `upstream_passthrough`).",
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"package_fetch_strategy": schema.StringAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Package-body fetch strategy (e.g. `upstream_passthrough`).",
+						PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+					},
+					"package_queries": schema.ListAttribute{
+						Optional:            true,
+						Computed:            true,
+						ElementType:         types.StringType,
+						MarkdownDescription: "Package-name-level queries. Not honored in passthrough mode (a non-empty value with `upstream_passthrough` is rejected).",
+						PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+					},
+					"allow_encoded_separators": schema.BoolAttribute{
+						Optional:            true,
+						Computed:            true,
+						MarkdownDescription: "Allow percent-encoded path separators in proxy request paths. Defaults to `false` (path-confusion probes are rejected).",
+						PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					},
+				},
+			},
 		},
 	}
 }
@@ -291,6 +448,23 @@ func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequ
 	if !plan.AptDescription.IsNull() {
 		createReq.AptDescription = plan.AptDescription.ValueStringPointer()
 	}
+	if !plan.CurationAllowUnverified.IsNull() && !plan.CurationAllowUnverified.IsUnknown() {
+		createReq.CurationAllowUnverified = plan.CurationAllowUnverified.ValueBoolPointer()
+	}
+	if !plan.NpmAllowedNamePatterns.IsNull() && !plan.NpmAllowedNamePatterns.IsUnknown() {
+		patterns, d := listToStringSlice(ctx, plan.NpmAllowedNamePatterns)
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		createReq.NpmAllowedNamePatterns = patterns
+	}
+	debianReq, diags := debianConfigFromObject(ctx, plan.Debian)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	createReq.Debian = debianReq
 
 	if !plan.Members.IsNull() && plan.RepoType.ValueString() != "virtual" {
 		resp.Diagnostics.AddAttributeError(
@@ -307,7 +481,21 @@ func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	model := repositoryToModel(repo)
+	// quarantine and curation enforcement are update-only server-side, so apply
+	// them with a follow-up PATCH when the user set any of them.
+	if postReq, ok := repoPostCreateUpdate(plan); ok {
+		repo, err = r.client.UpdateRepository(ctx, plan.Key.ValueString(), postReq)
+		if err != nil {
+			resp.Diagnostics.AddError("Error applying repository settings", err.Error())
+			return
+		}
+	}
+
+	model, diags := repositoryToModel(ctx, repo)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	applyWriteOnlyRepoFields(&model, plan)
 	if !plan.Members.IsNull() {
 		var keys []string
@@ -342,7 +530,11 @@ func (r *repositoryResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	model := repositoryToModel(repo)
+	model, diags := repositoryToModel(ctx, repo)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	applyWriteOnlyRepoFields(&model, state)
 	// Only reconcile membership when configured; leaving it null avoids a
 	// null-vs-empty diff for repos that don't use it.
@@ -421,6 +613,35 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 	if !plan.AptDescription.IsNull() {
 		updateReq.AptDescription = plan.AptDescription.ValueStringPointer()
 	}
+	if !plan.QuarantineEnabled.IsNull() && !plan.QuarantineEnabled.IsUnknown() {
+		updateReq.QuarantineEnabled = plan.QuarantineEnabled.ValueBoolPointer()
+	}
+	if !plan.QuarantineDurationMinutes.IsNull() && !plan.QuarantineDurationMinutes.IsUnknown() {
+		updateReq.QuarantineDurationMinutes = plan.QuarantineDurationMinutes.ValueInt64Pointer()
+	}
+	if !plan.CurationEnabled.IsNull() && !plan.CurationEnabled.IsUnknown() {
+		updateReq.CurationEnabled = plan.CurationEnabled.ValueBoolPointer()
+	}
+	if !plan.CurationDefaultAction.IsNull() && !plan.CurationDefaultAction.IsUnknown() {
+		updateReq.CurationDefaultAction = plan.CurationDefaultAction.ValueStringPointer()
+	}
+	if !plan.CurationAllowUnverified.IsNull() && !plan.CurationAllowUnverified.IsUnknown() {
+		updateReq.CurationAllowUnverified = plan.CurationAllowUnverified.ValueBoolPointer()
+	}
+	if !plan.NpmAllowedNamePatterns.IsNull() && !plan.NpmAllowedNamePatterns.IsUnknown() {
+		patterns, d := listToStringSlice(ctx, plan.NpmAllowedNamePatterns)
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		updateReq.NpmAllowedNamePatterns = patterns
+	}
+	debianReq, diags := debianConfigFromObject(ctx, plan.Debian)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	updateReq.Debian = debianReq
 
 	if !plan.Members.IsNull() && plan.RepoType.ValueString() != "virtual" {
 		resp.Diagnostics.AddAttributeError(
@@ -437,7 +658,11 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	model := repositoryToModel(repo)
+	model, diags := repositoryToModel(ctx, repo)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	applyWriteOnlyRepoFields(&model, plan)
 	if !plan.Members.IsNull() {
 		var keys []string
@@ -475,41 +700,149 @@ func (r *repositoryResource) ImportState(ctx context.Context, req resource.Impor
 	resource.ImportStatePassthroughID(ctx, path.Root("key"), req, resp)
 }
 
-func repositoryToModel(repo *client.Repository) repositoryResourceModel {
-	return repositoryResourceModel{
-		ID:                     types.StringValue(repo.ID),
-		Key:                    types.StringValue(repo.Key),
-		Name:                   types.StringValue(repo.Name),
-		Description:            stringPointerValue(repo.Description),
-		Format:                 types.StringValue(repo.Format),
-		RepoType:               types.StringValue(repo.RepoType),
-		IsPublic:               types.BoolValue(repo.IsPublic),
-		AllowAnonymousAccess:   types.BoolValue(repo.AllowAnonymousAccess),
-		StorageUsedBytes:       types.Int64Value(repo.StorageUsedBytes),
-		QuotaBytes:             int64PointerValue(repo.QuotaBytes),
-		UpstreamURL:            stringPointerValue(repo.UpstreamURL),
-		UpstreamAuthType:       stringPointerValue(repo.UpstreamAuthType),
-		UpstreamAuthConfigured: types.BoolValue(repo.UpstreamAuthConfigured),
-		CreatedAt:              types.StringValue(repo.CreatedAt),
-		UpdatedAt:              types.StringValue(repo.UpdatedAt),
-		Members:                types.ListNull(types.StringType),
-		PromotionOnly:          types.BoolValue(repo.PromotionOnly),
-		VersioningEnabled:      types.BoolValue(repo.VersioningEnabled),
-		ProjectID:              stringPointerValue(repo.ProjectID),
-		HasTrustedGpgKey:       types.BoolValue(repo.HasTrustedGpgKey),
-		CustomUserAgent:        stringPointerValue(repo.CustomUserAgent),
-		AptOrigin:              stringPointerValue(repo.AptOrigin),
-		AptLabel:               stringPointerValue(repo.AptLabel),
-		AptReleaseVersion:      stringPointerValue(repo.AptReleaseVersion),
-		AptDescription:         stringPointerValue(repo.AptDescription),
+func repositoryToModel(ctx context.Context, repo *client.Repository) (repositoryResourceModel, diag.Diagnostics) {
+	debian, diags := debianConfigToObject(ctx, repo.Debian)
+	npmPatterns, d := stringListValue(ctx, repo.NpmAllowedNamePatterns)
+	diags.Append(d...)
+	model := repositoryResourceModel{
+		ID:                        types.StringValue(repo.ID),
+		Key:                       types.StringValue(repo.Key),
+		Name:                      types.StringValue(repo.Name),
+		Description:               stringPointerValue(repo.Description),
+		Format:                    types.StringValue(repo.Format),
+		RepoType:                  types.StringValue(repo.RepoType),
+		IsPublic:                  types.BoolValue(repo.IsPublic),
+		AllowAnonymousAccess:      types.BoolValue(repo.AllowAnonymousAccess),
+		StorageUsedBytes:          types.Int64Value(repo.StorageUsedBytes),
+		QuotaBytes:                int64PointerValue(repo.QuotaBytes),
+		UpstreamURL:               stringPointerValue(repo.UpstreamURL),
+		UpstreamAuthType:          stringPointerValue(repo.UpstreamAuthType),
+		UpstreamAuthConfigured:    types.BoolValue(repo.UpstreamAuthConfigured),
+		CreatedAt:                 types.StringValue(repo.CreatedAt),
+		UpdatedAt:                 types.StringValue(repo.UpdatedAt),
+		Members:                   types.ListNull(types.StringType),
+		PromotionOnly:             types.BoolValue(repo.PromotionOnly),
+		VersioningEnabled:         types.BoolValue(repo.VersioningEnabled),
+		ProjectID:                 stringPointerValue(repo.ProjectID),
+		HasTrustedGpgKey:          types.BoolValue(repo.HasTrustedGpgKey),
+		CustomUserAgent:           stringPointerValue(repo.CustomUserAgent),
+		AptOrigin:                 stringPointerValue(repo.AptOrigin),
+		AptLabel:                  stringPointerValue(repo.AptLabel),
+		AptReleaseVersion:         stringPointerValue(repo.AptReleaseVersion),
+		AptDescription:            stringPointerValue(repo.AptDescription),
+		QuarantineEnabled:         boolPointerValue(repo.QuarantineEnabled),
+		QuarantineDurationMinutes: int64PointerValue(repo.QuarantineDurationMinutes),
+		CurationEnabled:           types.BoolValue(repo.CurationEnabled),
+		CurationDefaultAction:     types.StringValue(repo.CurationDefaultAction),
+		NpmAllowedNamePatterns:    npmPatterns,
+		Debian:                    debian,
 		// Write-only/create-only fields the API never returns; filled from plan
 		// (Create/Update) or prior state (Read).
-		TrustedGpgKey:         types.StringNull(),
-		StorageBackend:        types.StringNull(),
-		FormatKey:             types.StringNull(),
-		IndexUpstreamURL:      types.StringNull(),
-		PypiUpstreamIndexPath: types.StringNull(),
+		TrustedGpgKey:           types.StringNull(),
+		StorageBackend:          types.StringNull(),
+		FormatKey:               types.StringNull(),
+		IndexUpstreamURL:        types.StringNull(),
+		PypiUpstreamIndexPath:   types.StringNull(),
+		CurationAllowUnverified: types.BoolNull(),
 	}
+	return model, diags
+}
+
+// repoPostCreateUpdate builds a PATCH for the update-only settable fields
+// (quarantine, curation enforcement) the create endpoint doesn't accept,
+// returning false when the user set none of them.
+func repoPostCreateUpdate(plan repositoryResourceModel) (client.UpdateRepositoryRequest, bool) {
+	var req client.UpdateRepositoryRequest
+	set := false
+	if !plan.QuarantineEnabled.IsNull() && !plan.QuarantineEnabled.IsUnknown() {
+		req.QuarantineEnabled = plan.QuarantineEnabled.ValueBoolPointer()
+		set = true
+	}
+	if !plan.QuarantineDurationMinutes.IsNull() && !plan.QuarantineDurationMinutes.IsUnknown() {
+		req.QuarantineDurationMinutes = plan.QuarantineDurationMinutes.ValueInt64Pointer()
+		set = true
+	}
+	if !plan.CurationEnabled.IsNull() && !plan.CurationEnabled.IsUnknown() {
+		req.CurationEnabled = plan.CurationEnabled.ValueBoolPointer()
+		set = true
+	}
+	if !plan.CurationDefaultAction.IsNull() && !plan.CurationDefaultAction.IsUnknown() {
+		req.CurationDefaultAction = plan.CurationDefaultAction.ValueStringPointer()
+		set = true
+	}
+	return req, set
+}
+
+// debianConfigToObject converts the client Debian filter into the nested object
+// value (null when the repository has no filter).
+func debianConfigToObject(ctx context.Context, d *client.DebianConfig) (types.Object, diag.Diagnostics) {
+	if d == nil {
+		return types.ObjectNull(debianAttrTypes), nil
+	}
+	var diags diag.Diagnostics
+	dp, d1 := stringListValue(ctx, d.DistributionPaths)
+	comp, d2 := stringListValue(ctx, d.Components)
+	arch, d3 := stringListValue(ctx, d.Architectures)
+	pq, d4 := stringListValue(ctx, d.PackageQueries)
+	diags.Append(d1...)
+	diags.Append(d2...)
+	diags.Append(d3...)
+	diags.Append(d4...)
+	m := debianConfigModel{
+		DistributionPaths:      dp,
+		Components:             comp,
+		Architectures:          arch,
+		IncludeSourcePackages:  types.BoolValue(d.IncludeSourcePackages),
+		FlatRepository:         types.BoolValue(d.FlatRepository),
+		VerifyUpstreamMetadata: types.BoolValue(d.VerifyUpstreamMetadata),
+		UpstreamGpgKeyID:       stringPointerValue(d.UpstreamGpgKeyID),
+		MetadataStrategy:       types.StringValue(d.MetadataStrategy),
+		PackageFetchStrategy:   types.StringValue(d.PackageFetchStrategy),
+		PackageQueries:         pq,
+		AllowEncodedSeparators: types.BoolValue(d.AllowEncodedSeparators),
+	}
+	obj, d5 := types.ObjectValueFrom(ctx, debianAttrTypes, m)
+	diags.Append(d5...)
+	return obj, diags
+}
+
+// debianConfigFromObject converts the nested `debian` block into a client
+// request payload (nil when the block is absent). Unknown/unset fields are left
+// off so the server default applies.
+func debianConfigFromObject(ctx context.Context, o types.Object) (*client.DebianConfig, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if o.IsNull() || o.IsUnknown() {
+		return nil, diags
+	}
+	var m debianConfigModel
+	diags.Append(o.As(ctx, &m, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	dp, d1 := listToStringSlice(ctx, m.DistributionPaths)
+	comp, d2 := listToStringSlice(ctx, m.Components)
+	arch, d3 := listToStringSlice(ctx, m.Architectures)
+	pq, d4 := listToStringSlice(ctx, m.PackageQueries)
+	diags.Append(d1...)
+	diags.Append(d2...)
+	diags.Append(d3...)
+	diags.Append(d4...)
+	cfg := &client.DebianConfig{
+		DistributionPaths:      dp,
+		Components:             comp,
+		Architectures:          arch,
+		IncludeSourcePackages:  m.IncludeSourcePackages.ValueBool(),
+		FlatRepository:         m.FlatRepository.ValueBool(),
+		VerifyUpstreamMetadata: m.VerifyUpstreamMetadata.ValueBool(),
+		MetadataStrategy:       m.MetadataStrategy.ValueString(),
+		PackageFetchStrategy:   m.PackageFetchStrategy.ValueString(),
+		PackageQueries:         pq,
+		AllowEncodedSeparators: m.AllowEncodedSeparators.ValueBool(),
+	}
+	if !m.UpstreamGpgKeyID.IsNull() && !m.UpstreamGpgKeyID.IsUnknown() {
+		cfg.UpstreamGpgKeyID = m.UpstreamGpgKeyID.ValueStringPointer()
+	}
+	return cfg, diags
 }
 
 // applyWriteOnlyRepoFields copies write-only/create-only fields (never returned
@@ -520,6 +853,7 @@ func applyWriteOnlyRepoFields(dst *repositoryResourceModel, src repositoryResour
 	dst.FormatKey = src.FormatKey
 	dst.IndexUpstreamURL = src.IndexUpstreamURL
 	dst.PypiUpstreamIndexPath = src.PypiUpstreamIndexPath
+	dst.CurationAllowUnverified = src.CurationAllowUnverified
 }
 
 func stringPointerValue(s *string) types.String {
@@ -534,4 +868,11 @@ func int64PointerValue(i *int64) types.Int64 {
 		return types.Int64Null()
 	}
 	return types.Int64Value(*i)
+}
+
+func boolPointerValue(b *bool) types.Bool {
+	if b == nil {
+		return types.BoolNull()
+	}
+	return types.BoolValue(*b)
 }

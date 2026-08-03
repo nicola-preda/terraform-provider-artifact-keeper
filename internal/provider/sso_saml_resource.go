@@ -42,6 +42,8 @@ type ssoSamlResourceModel struct {
 	RequireSignedAssertions types.Bool   `tfsdk:"require_signed_assertions"`
 	AdminGroup              types.String `tfsdk:"admin_group"`
 	IsEnabled               types.Bool   `tfsdk:"is_enabled"`
+	UseAbsoluteAcsURL       types.Bool   `tfsdk:"use_absolute_acs_url"`
+	MapGroupsToGroups       types.Bool   `tfsdk:"map_groups_to_groups"`
 	HasCertificate          types.Bool   `tfsdk:"has_certificate"`
 	CreatedAt               types.String `tfsdk:"created_at"`
 	UpdatedAt               types.String `tfsdk:"updated_at"`
@@ -76,6 +78,8 @@ func (r *ssoSamlResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"require_signed_assertions": boolDefaulted("Require signed assertions. Defaults to `true`."),
 			"admin_group":               schema.StringAttribute{Optional: true, MarkdownDescription: "Group mapped to admin."},
 			"is_enabled":                boolDefaulted("Defaults to `true`."),
+			"use_absolute_acs_url":      boolDefaulted("Advertise an absolute AssertionConsumerService URL in SP metadata/AuthnRequests (needed behind a reverse proxy that rewrites the host). Defaults to `false`."),
+			"map_groups_to_groups":      boolDefaulted("Sync SAML groups to Artifact Keeper groups. Defaults to `false`."),
 			"has_certificate":           schema.BoolAttribute{Computed: true},
 			"created_at":                schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"updated_at":                schema.StringAttribute{Computed: true},
@@ -189,6 +193,12 @@ func samlRequestFromModel(ctx context.Context, m ssoSamlResourceModel) (client.S
 	if !m.IsEnabled.IsNull() && !m.IsEnabled.IsUnknown() {
 		req.IsEnabled = m.IsEnabled.ValueBoolPointer()
 	}
+	if !m.UseAbsoluteAcsURL.IsNull() && !m.UseAbsoluteAcsURL.IsUnknown() {
+		req.UseAbsoluteAcsURL = m.UseAbsoluteAcsURL.ValueBoolPointer()
+	}
+	if !m.MapGroupsToGroups.IsNull() && !m.MapGroupsToGroups.IsUnknown() {
+		req.MapGroupsToGroups = m.MapGroupsToGroups.ValueBoolPointer()
+	}
 	return req, diags
 }
 
@@ -207,6 +217,8 @@ func samlToModel(ctx context.Context, c *client.SamlConfig) (ssoSamlResourceMode
 		RequireSignedAssertions: types.BoolValue(c.RequireSignedAssertions),
 		AdminGroup:              stringPointerValue(c.AdminGroup),
 		IsEnabled:               types.BoolValue(c.IsEnabled),
+		UseAbsoluteAcsURL:       types.BoolValue(c.UseAbsoluteAcsURL),
+		MapGroupsToGroups:       types.BoolValue(c.MapGroupsToGroups),
 		HasCertificate:          types.BoolValue(c.HasCertificate),
 		CreatedAt:               types.StringValue(c.CreatedAt),
 		UpdatedAt:               types.StringValue(c.UpdatedAt),
