@@ -53,7 +53,7 @@ variable "webhook_secret" {
 - `is_enabled` (Boolean) Whether the webhook is enabled. Defaults to `true`. This is the only attribute that can be changed in place.
 - `payload_template` (String) Payload layout for the target platform. Defaults to `generic`. Changing this forces a new webhook.
 - `repository_id` (String) UUID of the repository this webhook is scoped to. Omit for a global webhook. Changing this forces a new webhook.
-- `secret` (String, Sensitive) Signing secret used to HMAC delivery bodies. If omitted, the server generates one (returned only in the raw create response and not retrievable afterwards). Not returned by the API on read; preserved from configuration. Changing this forces a new webhook.
+- `secret` (String, Sensitive) Signing secret used to HMAC delivery bodies. If omitted, the server generates one and it is captured into state here (the API returns it only once, in the raw create response, and never again). Not returned by the API on read; preserved from state. Changing this forces a new webhook.
 
 ### Read-Only
 

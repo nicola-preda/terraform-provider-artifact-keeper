@@ -172,7 +172,7 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.7.0 (**46 resources + 3 data sources**).
+Not bugs; scope decisions. Current as of v1.7.0 (**47 resources + 3 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. All whole-object manageable resources are modelled, the
 per-repository sub-config endpoints have `repository_*` resources
@@ -198,6 +198,9 @@ repository object.)
   another user (`/users/:id/tokens`) isn't covered.
 - Create-time upstream basic/bearer auth on the repository object (covered instead by the
   `repository_upstream_auth` resource, which upserts the same credentials).
+- `peer_instance_labels` (`GET/PUT /peers/:id/labels`): declarative key/value labels on a peer,
+  consumed by `sync_policy` match-labels. Backend has CRUD but no UI surface; low value, left
+  unmodelled. Add a `peer_instance_labels` resource if peer-label-driven sync targeting is needed.
 
 **Correctly excluded (not IaC):** imperative actions (approval, quarantine, plugin
 install, promotion/migration runs, CI token exchange), read-only/monitoring

@@ -3,12 +3,12 @@
 page_title: "artifactkeeper_repository_upstream_auth Resource - artifactkeeper"
 subcategory: ""
 description: |-
-  Upstream credentials a remote repository uses to authenticate to its origin. Write-only: the backend has no read endpoint and never returns the credentials, so Terraform cannot detect drift, and every apply re-sends username/password. Setting auth_type to none clears the auth.
+  Upstream credentials a remote repository uses to authenticate to its origin. The credentials themselves are write-only (the backend never returns them, so every apply re-sends username/password), but the repository object reports whether auth is configured and its type, surfaced here as configured/configured_auth_type for drift detection. Setting auth_type to none clears the auth.
 ---
 
 # artifactkeeper_repository_upstream_auth (Resource)
 
-Upstream credentials a remote repository uses to authenticate to its origin. Write-only: the backend has no read endpoint and never returns the credentials, so Terraform cannot detect drift, and every apply re-sends `username`/`password`. Setting `auth_type` to `none` clears the auth.
+Upstream credentials a remote repository uses to authenticate to its origin. The credentials themselves are write-only (the backend never returns them, so every apply re-sends `username`/`password`), but the repository object reports whether auth is configured and its type, surfaced here as `configured`/`configured_auth_type` for drift detection. Setting `auth_type` to `none` clears the auth.
 
 ## Example Usage
 
@@ -44,6 +44,8 @@ variable "upstream_password" {
 
 ### Read-Only
 
+- `configured` (Boolean) Whether upstream credentials are currently configured on the repository, read back from the repository object. Flips to `false` if the auth is cleared out of band.
+- `configured_auth_type` (String) The upstream auth type the server currently reports for the repository (`basic` or `bearer`), or null when none is configured.
 - `id` (String) Resource identifier. Equal to `repository_key`.
 
 ## Import

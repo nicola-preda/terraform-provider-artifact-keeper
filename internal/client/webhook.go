@@ -37,15 +37,24 @@ type CreateWebhookRequest struct {
 	EventSchemaVersion *string           `json:"event_schema_version,omitempty"`
 }
 
-// CreateWebhook creates a webhook. The create response flattens the webhook
-// fields alongside a one-time raw `secret`; only the webhook fields are decoded
-// here (the caller preserves the configured secret in state).
-func (c *Client) CreateWebhook(ctx context.Context, req CreateWebhookRequest) (*Webhook, error) {
-	var out Webhook
+// webhookCreateResponse decodes the create body, which flattens the webhook
+// fields alongside a one-time raw `secret` (present only when the server
+// generated one; never returned again by GET/LIST).
+type webhookCreateResponse struct {
+	Webhook
+	Secret *string `json:"secret"`
+}
+
+// CreateWebhook creates a webhook. It returns the webhook plus the one-time raw
+// signing secret when the server generated one (nil when the caller supplied a
+// secret); that value is unrecoverable afterwards, so the caller must store it.
+func (c *Client) CreateWebhook(ctx context.Context, req CreateWebhookRequest) (*Webhook, *string, error) {
+	var out webhookCreateResponse
 	if err := c.do(ctx, http.MethodPost, "/webhooks", req, &out); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &out, nil
+	wh := out.Webhook
+	return &wh, out.Secret, nil
 }
 
 func (c *Client) GetWebhook(ctx context.Context, id string) (*Webhook, error) {

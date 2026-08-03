@@ -177,6 +177,7 @@ func (p *artifactKeeperProvider) Resources(_ context.Context) []func() resource.
 		NewSecurityPolicyResource,
 		NewRepositoryLabelResource,
 		NewProjectResource,
+		NewProjectMembershipResource,
 		NewLicensePolicyResource,
 		NewEmailSubscriptionResource,
 		NewCiOidcIdentityMappingResource,

@@ -79,9 +79,10 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"secret": schema.StringAttribute{
 				Optional:            true,
+				Computed:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Signing secret used to HMAC delivery bodies. If omitted, the server generates one (returned only in the raw create response and not retrievable afterwards). Not returned by the API on read; preserved from configuration. Changing this forces a new webhook.",
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				MarkdownDescription: "Signing secret used to HMAC delivery bodies. If omitted, the server generates one and it is captured into state here (the API returns it only once, in the raw create response, and never again). Not returned by the API on read; preserved from state. Changing this forces a new webhook.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"repository_id": schema.StringAttribute{
 				Optional:            true,
@@ -172,7 +173,7 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 		createReq.EventSchemaVersion = plan.EventSchemaVersion.ValueStringPointer()
 	}
 
-	wh, err := r.client.CreateWebhook(ctx, createReq)
+	wh, generatedSecret, err := r.client.CreateWebhook(ctx, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating webhook", err.Error())
 		return
@@ -193,7 +194,16 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 
 	state, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
-	state.Secret = plan.Secret // not returned by the API; preserved from config
+	// The API never returns the secret on read. Preserve the configured secret,
+	// or capture the server-generated one (returned only once, on create).
+	switch {
+	case !plan.Secret.IsNull() && !plan.Secret.IsUnknown():
+		state.Secret = plan.Secret
+	case generatedSecret != nil:
+		state.Secret = types.StringValue(*generatedSecret)
+	default:
+		state.Secret = types.StringNull()
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 

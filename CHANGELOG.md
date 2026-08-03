@@ -40,6 +40,8 @@ closes several long-standing coverage gaps.
 - Client-side scope-vocabulary validation on `artifactkeeper_api_token`,
   `artifactkeeper_service_account_token`, and `artifactkeeper_repo_token`, so an invalid scope
   fails at plan time rather than as a 400 at apply (the backend now enforces the vocabulary).
+- `artifactkeeper_project_membership` resource: a user/group access grant (with its `actions`)
+  on a project, inherited by every repository assigned to the project.
 
 ### Changed
 
@@ -47,6 +49,13 @@ closes several long-standing coverage gaps.
 - `artifactkeeper_sso_oidc` sends `attribute_mapping` authoritatively on update (removed keys are
   now deleted rather than merged).
 - Corrected the `artifactkeeper_api_token` default-scope docs (`read` -> `read:artifacts`).
+
+### Fixed
+
+- `artifactkeeper_webhook` now captures the server-generated signing `secret` into state. The
+  API returns it only once, on create; it was previously discarded and unrecoverable.
+- `artifactkeeper_repository_upstream_auth` now reads back the repository's `configured` and
+  `configured_auth_type`, so upstream credentials cleared out of band are detected as drift.
 
 ### Upgrade notes (Artifact Keeper 1.7.0 behavior changes)
 
