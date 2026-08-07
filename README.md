@@ -1,13 +1,43 @@
 # terraform-provider-artifact-keeper
 
-Manage **Artifact Keeper** as code: repositories, users, SSO, peering, signing, promotion,
-and policies, all driven through its REST API.
+Manage **Artifact Keeper** as code, through its REST API. The goal is the whole
+configurable surface: every whole-object endpoint the API exposes, and every setting you
+can change in the UI, is a Terraform resource.
 
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.7.0** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.7.1** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
+
+## What you can manage
+
+49 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
+the admin UI; [`docs/`](docs/) has the full schema for every resource.
+
+| What you want to do | Resources |
+|---|---|
+| Create hosted, proxy and virtual repositories, and set quotas, anonymous access, versioning, project ownership | `repository` |
+| Tune a repository's proxy behaviour: cache TTL, upstream credentials, path rewrites, npm scope limits, PyPI tracks | `repository_cache_ttl`, `repository_upstream_auth`, `repository_routing_rules`, `repository_npm_scope_policy`, `repository_pypi_track` |
+| Gate what enters a repository: vulnerability scanning, age-based holds on fresh upstream releases, curation rules | `repository_security`, `age_gate`, `curation_rule` |
+| Expire and clean up artifacts on a schedule | `lifecycle_policy` |
+| Promote artifacts between staging and release repositories, with rules and quality bars | `promotion_rule`, `repository_release_target`, `quality_gate`, `security_policy`, `license_policy` |
+| Sign metadata and artifacts, and manage the signing keys | `signing_key`, `repository_signing_config` |
+| Onboard teams: projects, groups, users, per-repository permissions | `project`, `project_membership`, `group`, `group_membership`, `user`, `user_role_assignment`, `permission` |
+| Issue credentials for CI: service accounts, scoped tokens, per-repo tokens, keyless OIDC from your CI provider | `service_account`, `service_account_token`, `api_token`, `user_api_token`, `repo_token`, `ci_oidc_provider`, `ci_oidc_identity_mapping` |
+| Wire up SSO against your IdP | `sso_oidc`, `sso_saml`, `sso_ldap` |
+| Replicate between instances and target peers by label | `peer`, `peer_repository_subscription`, `peer_instance_label`, `peer_network_profile`, `sync_policy`, `remote_instance` |
+| Import from a legacy registry (Nexus, Artifactory) | `migration_source`, `migration_job` |
+| Notify on events | `webhook`, `email_subscription` |
+| Set instance-wide behaviour: retention, upload limits, anonymous downloads, telemetry, which package formats are enabled, plugins | `system_settings`, `telemetry_settings`, `format_handler`, `plugin` |
+| Look up objects you don't manage here, by their natural key | `data.artifactkeeper_repository`, `data.artifactkeeper_project`, `data.artifactkeeper_user`, `data.artifactkeeper_group` |
+
+Deliberately **not** modelled, because they aren't declarative state: imperative actions
+(approvals, promotion and migration runs, quarantine release, plugin installs, cache
+invalidation, storage GC, backup runs), read-only and monitoring endpoints, the package
+wire protocols themselves, and SMTP (env-configured upstream, with only a test endpoint).
+[MAINTAINING.md](MAINTAINING.md#capability-gaps-backend-offers-provider-doesnt-model) has
+the exact boundary.
 
 ## Usage
 
@@ -16,7 +46,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.7.0"
+      version = "~> 1.7.1"
     }
   }
 }
@@ -40,28 +70,6 @@ resource "artifactkeeper_repository" "npm_proxy" {
 **Auth:** a bearer `token` (an Artifact Keeper API token), or `username` + `password`
 (traded for a token at `POST /api/v1/auth/login`). Any of these can come from the
 environment: `ARTIFACT_KEEPER_TOKEN`, `ARTIFACT_KEEPER_USERNAME`, `ARTIFACT_KEEPER_PASSWORD`.
-
-## Resources
-
-47 resources. See [`docs/`](docs/) for each one's schema.
-
-| Area | Resources |
-|---|---|
-| Repositories | `repository`, `repository_label`, `repository_signing_config`, `repository_security`, `repository_cache_ttl`, `repository_npm_scope_policy`, `repository_routing_rules`, `repository_pypi_track`, `repository_upstream_auth`, `repository_release_target`, `lifecycle_policy`, `age_gate` |
-| Projects | `project`, `project_membership` |
-| Identity & access | `user`, `group`, `group_membership`, `user_role_assignment`, `permission`, `service_account`, `service_account_token`, `api_token`, `repo_token` |
-| SSO & auth | `sso_oidc`, `sso_ldap`, `sso_saml`, `ci_oidc_provider`, `ci_oidc_identity_mapping` |
-| Replication & migration | `peer`, `peer_repository_subscription`, `peer_network_profile`, `remote_instance`, `sync_policy`, `migration_source`, `migration_job` |
-| Promotion & quality | `promotion_rule`, `quality_gate`, `curation_rule`, `security_policy`, `license_policy` |
-| Delivery & notifications | `webhook`, `signing_key`, `email_subscription` |
-| Instance settings | `system_settings`, `telemetry_settings`, `format_handler`, `plugin` |
-
-Data sources: `artifactkeeper_repository` (by key), `artifactkeeper_user` and
-`artifactkeeper_group` (by UUID).
-
-Nearly every setting configurable through the API/UI is modelled. The remaining gaps are
-narrow: admin minting of a token for another user, and format-specific package fields.
-MAINTAINING.md has the exact boundary.
 
 ## Gotchas
 
@@ -92,8 +100,9 @@ provider "artifactkeeper" {
 
 ## Versioning
 
-The provider version tracks the Artifact Keeper version it's validated against: `v1.7.0`
-targets Artifact Keeper 1.7.0. Pin with `~> 1.7.0`.
+The provider version tracks the Artifact Keeper version it's validated against: `v1.7.1`
+targets Artifact Keeper 1.7.1, and every release's acceptance suite is run against that
+exact backend image. Pin with `~> 1.7.1`.
 
 ## Development
 

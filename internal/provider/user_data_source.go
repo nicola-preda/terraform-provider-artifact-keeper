@@ -41,10 +41,10 @@ func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 
 func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = dschema.Schema{
-		MarkdownDescription: "Looks up an existing user by its UUID.",
+		MarkdownDescription: "Looks up an existing user by its username, resolving the UUID (`id`) you pass to memberships and role assignments.",
 		Attributes: map[string]dschema.Attribute{
-			"id":                   dschema.StringAttribute{Required: true, MarkdownDescription: "User UUID to look up."},
-			"username":             dschema.StringAttribute{Computed: true},
+			"username":             dschema.StringAttribute{Required: true, MarkdownDescription: "Username to look up."},
+			"id":                   dschema.StringAttribute{Computed: true, MarkdownDescription: "Resolved user UUID."},
 			"email":                dschema.StringAttribute{Computed: true},
 			"display_name":         dschema.StringAttribute{Computed: true},
 			"auth_provider":        dschema.StringAttribute{Computed: true},
@@ -67,7 +67,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	u, err := d.client.GetUser(ctx, cfg.ID.ValueString())
+	u, err := d.client.FindUserByUsername(ctx, cfg.Username.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading user", err.Error())
 		return

@@ -37,20 +37,26 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.7.0** (2026-07-31) |
-| Provider changes needed | additive only, no reworks (new fields + typed curation rules; see the changelog) |
-| Acceptance suite | run live against the 1.7.0 backend image (2026-08-03); all 12 `TestAcc` functions pass |
+| Validated against | **Artifact Keeper 1.7.1** (2026-08-07) |
+| Provider changes needed | additive only (`age_gate.mode`), plus two coverage gaps closed |
+| Acceptance suite | run live against the 1.7.1 backend image (2026-08-07); all 12 `TestAcc` functions pass |
 
-Drop-in from the 1.6.x line: no consumed route, field, or type was removed or retyped. The
-1.7.0 diff added new *optional* fields (now modelled) and tightened some authorization checks
-at runtime (see Caveats). Re-check each backend bump with the procedure below.
+Drop-in from 1.7.0: a mechanical diff of every `Serialize`/`Deserialize` struct under
+`api/handlers/`, `services/` and `models/` between the two tags shows **additions only** —
+nothing removed, renamed, or retyped. The only provider-relevant one is the age gate's new
+`mode` field (now modelled). The rest don't reach the provider: per-repo age-gate response
+fields (`RepositoryDetails.age_gate_mode`, `RepoInfo.age_gate_mode`), review-flow internals
+(`AgeGateReview.basis_*`, `AgeGateSubstitution`), upload-session internals, and the
+`SystemStats` proxy-cache counters. One route was added,
+`POST /repositories/{key}/storage-gc` (an imperative action, not modelled). Re-check each
+backend bump with the procedure below.
 
 ## Versioning & releasing
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.7.0` (AK 1.7.0); consumers pin
-`~> 1.7.0`. A provider-only fix that keeps the same validated AK version is rare; if one
+(`internal/provider/provider.go`). This release is `v1.7.1` (AK 1.7.1); consumers pin
+`~> 1.7.1`. A provider-only fix that keeps the same validated AK version is rare; if one
 is needed, bump the patch ahead of AK and note it in the changelog.
 
 Cutting a release:
@@ -89,9 +95,12 @@ Rust names (provider Go names differ where noted).
 | `user` | `POST /users`, `GET/PATCH/DELETE /users/{id}` | `handlers/users.rs` | `AdminUserResponse`, `CreateUserRequest`, `UpdateUserRequest`, `CreateUserResponse` |
 | `group` | `POST /groups`, `GET/PUT/DELETE /groups/{id}` | `handlers/groups.rs` | `GroupResponse`, `CreateGroupRequest` (used for POST **and** PUT) |
 | `permission` | `POST /permissions`, `GET/PUT/DELETE /permissions/{id}` | `handlers/permissions.rs`, `services/permission_service.rs` | `PermissionResponse`, `CreatePermissionRequest` (POST **and** PUT) |
+| `peer_instance_label` | `GET /peers/{id}/labels`, `POST`\|`DELETE …/{label_key}` (one resource per label; the whole-set `PUT` is not used) | `handlers/peer_instance_labels.rs` | `PeerLabelResponse`, `AddPeerLabelRequest` |
+| `user_api_token` | `POST/GET /users/{id}/tokens`, `DELETE …/{token_id}` (admin can mint for another user) | `handlers/users.rs` | `CreateUserApiTokenRequest`, `ApiTokenResponse`, `ApiTokenCreatedResponse` |
+| `age_gate` | `GET/PUT /repositories/{key}/age-gate` | `handlers/age_gate.rs`, `services/age_gate_service.rs` | `AgeGateConfigResponse`, `UpdateAgeGateConfigRequest`, `AgeGateMode` |
 | (auth) | `POST /auth/login` | `handlers/auth.rs` | `LoginRequest`, `LoginResponse` |
 
-The 27 resources added after the baseline aren't all listed here. Most map 1:1 to a
+The 29 resources added after the baseline aren't all listed here. Most map 1:1 to a
 same-named backend handler (`handlers/<name>.rs`); a few share one (e.g.
 `group_membership`→`groups`, `service_account_token`→`service_accounts`,
 `system_settings`/`telemetry_settings`→admin settings). To find a resource's endpoints
@@ -101,18 +110,24 @@ that handler on a bump.
 ## How to re-check drift on a version bump
 
 When the backend moves to a new tag (say `v1.8.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.7.0`).
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.7.1`).
+
+Fastest first pass, and the one that actually caught the 1.7.1 delta: diff every
+serializable struct between the two tags, rather than reading handlers one by one. Extract
+`pub struct X { … }` field lists from `api/handlers/`, `services/` and `models/` at both
+tags, sort, and diff. Additions are safe; a removal, rename or retype of a field the
+provider reads or sends is the breaking set.
 
 ```sh
 BK=~/git/github.com/artifact-keeper/artifact-keeper
 git -C "$BK" fetch --tags
 
 # 1. Did any consumed route move? (path + HTTP method)
-git -C "$BK" diff v1.7.0 v1.8.0 -- backend/src/api/routes.rs
+git -C "$BK" diff v1.7.1 v1.8.0 -- backend/src/api/routes.rs
 
 # 2. Diff each consumed struct. Repeat per row in the map above.
-git -C "$BK" diff v1.7.0 v1.8.0 -- backend/src/api/handlers/repositories.rs
-git -C "$BK" diff v1.7.0 v1.8.0 -- backend/src/api/handlers/peers.rs
+git -C "$BK" diff v1.7.1 v1.8.0 -- backend/src/api/handlers/repositories.rs
+git -C "$BK" diff v1.7.1 v1.8.0 -- backend/src/api/handlers/peers.rs
 # … etc. Inspect a struct at the new tag with:
 git -C "$BK" grep -n 'struct RepositoryResponse' v1.8.0
 ```
@@ -165,6 +180,15 @@ For a big jump, fan the per-row diffs out across parallel workers.
   validates the same list client-side (`tokenScopes` in `api_token_resource.go`),
   so a bad scope fails at plan time. The omitted-scopes default is now
   `read:artifacts`.
+- **Age gate: `mode` and the (format, mode) enforcement check (1.7.1, #2264).** `mode` picks
+  the timestamp the age is measured from: `upstream_publish_time` (server default, trusts the
+  registry) or `first_seen` (local first sighting; unbackdatable, but treats any newly-cached
+  version as new). Omitting it keeps the repository's current mode, so pre-mode clients that
+  PUT `{enabled, min_age_days}` stay valid. **Enabling** the gate now 400s when the format
+  can't enforce that mode: npm and pypi support both modes, go supports `first_seen` only;
+  disabling is always allowed. 1.7.1 is also where the gate started actually being enforced
+  on npm/PyPI/Go proxy downloads (a `451` below `min_age_days`), so turning it on is now
+  load-bearing rather than declarative-only.
 - **group_membership can't manage SSO-owned groups (1.7.0, #2874).** Add/remove
   members 409s when the group has an `external_source` (`oidc`/`saml`/`ldap`). The
   new computed `group.external_source` attribute surfaces the owner; only local
@@ -172,39 +196,49 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.7.0 (**47 resources + 3 data sources**).
+Not bugs; scope decisions. Current as of v1.7.1 (**49 resources + 4 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
-actions that aren't IaC. All whole-object manageable resources are modelled, the
-per-repository sub-config endpoints have `repository_*` resources
-(`repository_security`, `repository_cache_ttl`, `repository_npm_scope_policy`,
-`repository_routing_rules`, `repository_pypi_track`, `repository_upstream_auth`,
-`repository_release_target`), and the v1.7.0 pass closed the remaining main-object
-fields and the SSO gaps. What's left is narrow:
+actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
+sub-config endpoints have `repository_*` resources (`repository_security`,
+`repository_cache_ttl`, `repository_npm_scope_policy`, `repository_routing_rules`,
+`repository_pypi_track`, `repository_upstream_auth`, `repository_release_target`), and the
+v1.7.1 pass closed the last two API-only gaps.
+
+**Closed in v1.7.1:** `age_gate.mode`; `peer_instance_label` (peer key/value labels, which
+`sync_policy` match rules consume); `user_api_token` (admin minting a token for another
+user via `POST /users/{id}/tokens`); and the `user`/`group` data sources now look up by
+`username`/`name` instead of requiring a UUID you'd have to find first, joined by a new
+`project` data source keyed on `key`.
 
 **Closed in v1.7.0:** repository `quarantine_enabled`/`quarantine_duration_minutes`,
 `curation_enabled`/`curation_default_action`/`curation_allow_unverified`, and the nested
 `debian` proxy filter; the SSO `allow_legacy_rsa_keys` (OIDC),
 `insecure_skip_verify`/`ca_certificate` (LDAP), `use_absolute_acs_url`/`map_groups_to_groups`
 (SAML) fields; `group_membership` now reads all members (paged); typed `curation_rule`
-(`rule_type`/`config`/`scope`). (`release_repository_key` is managed by
-`repository_release_target`, and `npm_allowed_scopes`/`npm_allow_unscoped` by
-`repository_npm_scope_policy`, so they're intentionally not duplicated on the main object.
-`npm_allowed_name_patterns`, which that sub-resource does *not* cover, is modelled on the
-repository object.)
+(`rule_type`/`config`/`scope`).
 
-**Still not exposed (narrow):**
-
-- `api_token`: self tokens only (`/profile/access-tokens`); admin minting for
-  another user (`/users/:id/tokens`) isn't covered.
-- Create-time upstream basic/bearer auth on the repository object (covered instead by the
-  `repository_upstream_auth` resource, which upserts the same credentials).
-- `peer_instance_labels` (`GET/PUT /peers/:id/labels`): declarative key/value labels on a peer,
-  consumed by `sync_policy` match-labels. Backend has CRUD but no UI surface; low value, left
-  unmodelled. Add a `peer_instance_labels` resource if peer-label-driven sync targeting is needed.
+**Intentional single-owner duplicates.** A few settings exist on both the repository object
+and a dedicated resource; the sub-resource owns them, so they are deliberately not on
+`artifactkeeper_repository`: create-time `upstream_username`/`upstream_password` (owned by
+`repository_upstream_auth`), `npm_allowed_scopes`/`npm_allow_unscoped` (owned by
+`repository_npm_scope_policy`), `release_repository_key` (owned by
+`repository_release_target`), and `age_gate_mode` (owned by `age_gate`).
+`npm_allowed_name_patterns`, which no sub-resource covers, *is* on the repository object.
 
 **Correctly excluded (not IaC):** imperative actions (approval, quarantine, plugin
-install, promotion/migration runs, CI token exchange), read-only/monitoring
-endpoints, package wire protocols, and SMTP (env-configured; only a test endpoint).
+install, promotion/migration runs, cache invalidation, per-repo and global storage GC,
+backup runs, CI token exchange), read-only/monitoring endpoints (`/admin/stats`,
+`/analytics/*`, `/system/config`, `/admin/storage-backends`, `/admin/audit`), artifact- and
+build-scoped records that CI produces rather than Terraform (`/builds`, `/sbom`,
+`/artifacts/{id}/labels`, Dependency-Track finding analysis), package wire protocols, and
+SMTP (env-configured; the UI's SMTP tab is display-and-test only, there is no save
+endpoint, as its own source comments note).
+
+**Not a provider gap, worth knowing:** the web UI ships an admin rate-limit page
+(`src/lib/api/rate-limits.ts`: `GET /admin/rate-limits`, `GET/POST/DELETE
+/admin/rate-limits/exemptions`) whose backend endpoints **do not exist** in 1.7.1 —
+rate-limit exemptions are still env-only (`RATE_LIMIT_EXEMPT_*`). Nothing to model until
+the backend side lands (web #270 / backend #680).
 
 Don't advertise these as "coming soon" in the README. Document what's implemented,
 and add the resource in the same change that lists it.
@@ -226,7 +260,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.7.0 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.7.1 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh
@@ -250,17 +284,21 @@ docker compose -f docker-compose.test.yml down -v
 without them terraform-plugin-testing registers the provider under the legacy `-`
 namespace on `registry.terraform.io`, which `tofu` rejects.
 
-The acceptance suite is pinned to the 1.7.0 backend image and was last run live against 1.7.0
-(2026-08-03): all 12 `TestAcc` functions pass. It exercises the great majority
+The acceptance suite is pinned to the 1.7.1 backend image and was last run live against 1.7.1
+(2026-08-07): all 12 `TestAcc` functions pass. It exercises the great majority
 of resources. The smoke/prereq tests create the full post-baseline set alongside
-`repository`/`user`/`group`/`permission` and the data sources. `migration_job` (and, via
-it, `migration_source`) are covered too: `TestAccMigrationJobResource` creates a connection
-and a pending job, since neither needs a reachable source. Only `peer`, `sso_*`, `plugin`, and
+`repository`/`user`/`group`/`permission` and the data sources, including the v1.7.1
+additions: `age_gate` now sets `mode = "first_seen"` on an npm remote (exercising the
+(format, mode) enforcement path), and `user_api_token` mints a token for the test user.
+`migration_job` (and, via it, `migration_source`) are covered too:
+`TestAccMigrationJobResource` creates a connection and a pending job, since neither needs a
+reachable source. Only `peer` (and therefore `peer_instance_label`), `sso_*`, `plugin`, and
 actually *running* a migration (start / test-connection) sit outside it; they need external
 systems (a reachable peer, an IdP, an installable WASM plugin git repo, a live source
-registry) to exercise. `plugin` is source-verified against 1.7.0 (every endpoint, field, and
+registry) to exercise. `plugin` is source-verified against 1.7.1 (every endpoint, field, and
 the `active` status string checked against `handlers/plugins.rs`) plus unit-tested, but has
-not had a live end-to-end apply.
+not had a live end-to-end apply; `peer_instance_label` is source-verified the same way
+against `handlers/peer_instance_labels.rs`.
 
 ## Client behavior
 

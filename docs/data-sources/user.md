@@ -3,20 +3,20 @@
 page_title: "artifactkeeper_user Data Source - artifactkeeper"
 subcategory: ""
 description: |-
-  Looks up an existing user by its UUID.
+  Looks up an existing user by its username, resolving the UUID (id) you pass to memberships and role assignments.
 ---
 
 # artifactkeeper_user (Data Source)
 
-Looks up an existing user by its UUID.
+Looks up an existing user by its username, resolving the UUID (`id`) you pass to memberships and role assignments.
 
 ## Example Usage
 
 ```terraform
-# Look up an existing user by its UUID (from the admin UI, the users API, or a
-# managed artifactkeeper_user resource's id).
+# Look up an existing user by username to resolve its id for memberships and
+# role assignments.
 data "artifactkeeper_user" "alice" {
-  id = "9d4e2f7a-1c8b-4a35-b6e0-3f9a1c2d8e50"
+  username = "alice"
 }
 ```
 
@@ -25,7 +25,7 @@ data "artifactkeeper_user" "alice" {
 
 ### Required
 
-- `id` (String) User UUID to look up.
+- `username` (String) Username to look up.
 
 ### Read-Only
 
@@ -33,8 +33,8 @@ data "artifactkeeper_user" "alice" {
 - `created_at` (String)
 - `display_name` (String)
 - `email` (String)
+- `id` (String) Resolved user UUID.
 - `is_active` (Boolean)
 - `is_admin` (Boolean)
 - `last_login_at` (String)
 - `must_change_password` (Boolean)
-- `username` (String)

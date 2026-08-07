@@ -43,6 +43,18 @@ func (c *Client) CreateProject(ctx context.Context, req CreateProjectRequest) (*
 	return &out, nil
 }
 
+// ListProjects returns all projects. The API has no key lookup, so callers
+// resolve a key by listing (the list is small and unpaginated).
+func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
+	var out struct {
+		Items []Project `json:"items"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/projects", nil, &out); err != nil {
+		return nil, err
+	}
+	return out.Items, nil
+}
+
 func (c *Client) GetProject(ctx context.Context, id string) (*Project, error) {
 	var out Project
 	if err := c.do(ctx, http.MethodGet, "/projects/"+url.PathEscape(id), nil, &out); err != nil {

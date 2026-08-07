@@ -113,6 +113,12 @@ resource "artifactkeeper_user" "member" {
   email    = "tf-acc-member@example.com"
 }
 
+resource "artifactkeeper_user_api_token" "member_tok" {
+  user_id = artifactkeeper_user.member.id
+  name    = "tf-acc-user-token"
+  scopes  = ["read:artifacts"]
+}
+
 resource "artifactkeeper_group_membership" "gm" {
   group_id = artifactkeeper_group.grp.id
   user_id  = artifactkeeper_user.member.id
@@ -168,6 +174,8 @@ resource "artifactkeeper_format_handler" "oci" {
 					resource.TestCheckResourceAttrSet("artifactkeeper_email_subscription.notify", "id"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_ci_oidc_identity_mapping.gl_map", "id"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_service_account_token.ci_tok", "token"),
+					resource.TestCheckResourceAttrSet("artifactkeeper_user_api_token.member_tok", "token"),
+					resource.TestCheckResourceAttrSet("artifactkeeper_user_api_token.member_tok", "token_prefix"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_group_membership.gm", "id"),
 					resource.TestCheckResourceAttr("artifactkeeper_repository.expanded", "promotion_only", "true"),
 					resource.TestCheckResourceAttr("artifactkeeper_repository.expanded", "versioning_enabled", "true"),

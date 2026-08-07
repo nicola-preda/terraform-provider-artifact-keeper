@@ -31,6 +31,10 @@ resource "artifactkeeper_age_gate" "npm_remote" {
 - `min_age_days` (Number) Minimum age, in days, an upstream version must reach before it is served. `0` is the trusted-remote setting (no delay, but explicit rejections still block). Must be between 0 and 3650.
 - `repository_key` (String) Key of the remote repository whose age gate is configured. Changing this forces a new resource.
 
+### Optional
+
+- `mode` (String) Which timestamp the age is measured from (Artifact Keeper 1.7.1+). `upstream_publish_time` (the server default) trusts the upstream registry's publish date; `first_seen` uses the first time this instance saw the version, which no publisher can backdate but which treats any newly-cached version as new, however old it really is. Omit to keep the repository's current mode. Enabling the gate requires a format that supports the mode: npm and pypi support both, go supports `first_seen` only.
+
 ## Import
 
 Import is supported using the following syntax:

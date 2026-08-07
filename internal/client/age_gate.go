@@ -14,13 +14,17 @@ type AgeGateConfig struct {
 	RepositoryKey string `json:"repository_key"`
 	Enabled       bool   `json:"enabled"`
 	MinAgeDays    int64  `json:"min_age_days"`
+	// Mode is the age source: upstream_publish_time or first_seen (1.7.1).
+	Mode string `json:"mode"`
 }
 
-// AgeGateConfigRequest maps UpdateAgeGateConfigRequest (PUT). Both fields are
-// mandatory on the backend.
+// AgeGateConfigRequest maps UpdateAgeGateConfigRequest (PUT). Enabled and
+// MinAgeDays are mandatory on the backend; an omitted Mode keeps the
+// repository's current mode.
 type AgeGateConfigRequest struct {
-	Enabled    bool  `json:"enabled"`
-	MinAgeDays int64 `json:"min_age_days"`
+	Enabled    bool    `json:"enabled"`
+	MinAgeDays int64   `json:"min_age_days"`
+	Mode       *string `json:"mode,omitempty"`
 }
 
 func (c *Client) GetAgeGateConfig(ctx context.Context, repositoryKey string) (*AgeGateConfig, error) {

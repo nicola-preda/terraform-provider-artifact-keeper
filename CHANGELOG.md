@@ -2,8 +2,45 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.7.0` = Artifact Keeper 1.7.0);
+the Artifact Keeper release it is validated against (`v1.7.1` = Artifact Keeper 1.7.1);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
+
+## [1.7.1] - 2026-08-07
+
+Validated against Artifact Keeper 1.7.1, with the acceptance suite run live against that
+backend image. A struct-level diff of the whole 1.7.0 → 1.7.1 API surface shows additions
+only: nothing the provider reads or sends was removed, renamed, or retyped, so this is a
+drop-in upgrade. Alongside the one new backend field, this release closes the last two
+API-only coverage gaps and makes the identity data sources usable without knowing a UUID
+up front.
+
+### Added
+
+- `artifactkeeper_age_gate`: `mode` attribute (Artifact Keeper 1.7.1, #2264). Chooses the
+  timestamp the age is measured from, `upstream_publish_time` (server default) or
+  `first_seen`. Omit it to keep the repository's current mode. Note that **enabling** the
+  gate now requires a format that can enforce the chosen mode: npm and pypi support both,
+  go supports `first_seen` only.
+- `artifactkeeper_peer_instance_label`: key/value labels on a peer instance, which
+  `artifactkeeper_sync_policy` match rules select on. One resource per label, so peers
+  managed elsewhere keep their own labels; the backend re-evaluates sync policies on write.
+- `artifactkeeper_user_api_token`: mints an API token for a specific user
+  (`POST /users/{id}/tokens`), which an admin can do on another user's behalf. Complements
+  `artifactkeeper_api_token` (the caller's own token) and
+  `artifactkeeper_service_account_token` (machine identities). `scopes` is required here,
+  since this endpoint has no server-side default.
+- `artifactkeeper_project` data source, looking a project up by `key` to resolve the UUID
+  that `repository.project_id` and project memberships need.
+
+### Changed
+
+- `artifactkeeper_user` and `artifactkeeper_group` data sources now look up by `username`
+  and `name` respectively, rather than requiring the UUID you were probably using the data
+  source to find. `id` becomes a computed attribute. **Breaking for existing configs** that
+  passed `id`: swap `id = "<uuid>"` for `username = "..."` / `name = "..."`.
+- The acceptance suite covers the new surface: `age_gate` exercises `mode = "first_seen"`
+  on an npm remote (hitting the (format, mode) enforcement path), and `user_api_token`
+  mints a token for the test user.
 
 ## [1.7.0] - 2026-07-31
 

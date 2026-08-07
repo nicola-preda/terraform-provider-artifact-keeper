@@ -72,6 +72,7 @@ resource "artifactkeeper_age_gate" "ag" {
   repository_key = artifactkeeper_repository.remote.key
   enabled        = true
   min_age_days   = 14
+  mode           = "first_seen"
 }
 
 resource "artifactkeeper_repo_token" "t" {
@@ -92,6 +93,7 @@ resource "artifactkeeper_repository_label" "lbl" {
 					resource.TestCheckResourceAttr("artifactkeeper_curation_rule.c", "action", "block"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_lifecycle_policy.l", "id"),
 					resource.TestCheckResourceAttr("artifactkeeper_age_gate.ag", "min_age_days", "14"),
+					resource.TestCheckResourceAttr("artifactkeeper_age_gate.ag", "mode", "first_seen"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_repo_token.t", "token"),
 					resource.TestCheckResourceAttr("artifactkeeper_repository_label.lbl", "value", "prod"),
 				),

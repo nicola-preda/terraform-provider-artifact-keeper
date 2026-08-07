@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -48,6 +49,26 @@ func (c *Client) CreateUser(ctx context.Context, req CreateUserRequest) (*Create
 		return nil, err
 	}
 	return &out, nil
+}
+
+// FindUserByUsername resolves a username to its user. The search endpoint does
+// a substring match, so we filter the results for an exact username.
+func (c *Client) FindUserByUsername(ctx context.Context, username string) (*User, error) {
+	q := url.Values{}
+	q.Set("search", username)
+	q.Set("per_page", "100") // ponytail: an exact match hiding past 100 substring collisions is pathological
+	var out struct {
+		Items []User `json:"items"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/users?"+q.Encode(), nil, &out); err != nil {
+		return nil, err
+	}
+	for i := range out.Items {
+		if out.Items[i].Username == username {
+			return &out.Items[i], nil
+		}
+	}
+	return nil, &APIError{StatusCode: http.StatusNotFound, Message: fmt.Sprintf("no user with username %q", username)}
 }
 
 func (c *Client) GetUser(ctx context.Context, id string) (*User, error) {

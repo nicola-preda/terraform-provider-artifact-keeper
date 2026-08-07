@@ -3,20 +3,19 @@
 page_title: "artifactkeeper_group Data Source - artifactkeeper"
 subcategory: ""
 description: |-
-  Looks up an existing group by its UUID.
+  Looks up an existing group by its name, resolving the UUID (id) you pass to memberships and project memberships.
 ---
 
 # artifactkeeper_group (Data Source)
 
-Looks up an existing group by its UUID.
+Looks up an existing group by its name, resolving the UUID (`id`) you pass to memberships and project memberships.
 
 ## Example Usage
 
 ```terraform
-# Look up an existing group by its UUID (from the admin UI, the groups API, or a
-# managed artifactkeeper_group resource's id).
+# Look up an existing group by name to resolve its id for memberships.
 data "artifactkeeper_group" "platform" {
-  id = "6a1f0b93-2e74-4c18-9d5a-7b2c4e60af31"
+  name = "platform"
 }
 ```
 
@@ -25,13 +24,13 @@ data "artifactkeeper_group" "platform" {
 
 ### Required
 
-- `id` (String) Group UUID to look up.
+- `name` (String) Group name to look up.
 
 ### Read-Only
 
 - `created_at` (String)
 - `description` (String)
 - `external_source` (String) SSO provider that owns this group (`oidc`, `saml`, or `ldap`), or null for a locally-managed group.
+- `id` (String) Resolved group UUID.
 - `member_count` (Number)
-- `name` (String)
 - `updated_at` (String)

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -31,6 +32,7 @@ type ageGateResourceModel struct {
 	RepositoryKey types.String `tfsdk:"repository_key"`
 	Enabled       types.Bool   `tfsdk:"enabled"`
 	MinAgeDays    types.Int64  `tfsdk:"min_age_days"`
+	Mode          types.String `tfsdk:"mode"`
 }
 
 func (r *ageGateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -55,6 +57,17 @@ func (r *ageGateResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "Minimum age, in days, an upstream version must reach before it is served. `0` is the trusted-remote setting (no delay, but explicit rejections still block). Must be between 0 and 3650.",
 				Validators:          []validator.Int64{int64validator.Between(0, 3650)},
 			},
+			"mode": schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				MarkdownDescription: "Which timestamp the age is measured from (Artifact Keeper 1.7.1+). " +
+					"`upstream_publish_time` (the server default) trusts the upstream registry's publish date; " +
+					"`first_seen` uses the first time this instance saw the version, which no publisher can backdate " +
+					"but which treats any newly-cached version as new, however old it really is. " +
+					"Omit to keep the repository's current mode. Enabling the gate requires a format that supports " +
+					"the mode: npm and pypi support both, go supports `first_seen` only.",
+				Validators: []validator.String{stringvalidator.OneOf("upstream_publish_time", "first_seen")},
+			},
 		},
 	}
 }
@@ -75,6 +88,7 @@ func (r *ageGateResource) Create(ctx context.Context, req resource.CreateRequest
 	cfg, err := r.client.UpdateAgeGateConfig(ctx, plan.RepositoryKey.ValueString(), client.AgeGateConfigRequest{
 		Enabled:    plan.Enabled.ValueBool(),
 		MinAgeDays: plan.MinAgeDays.ValueInt64(),
+		Mode:       optionalString(plan.Mode),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error configuring age gate", err.Error())
@@ -114,6 +128,7 @@ func (r *ageGateResource) Update(ctx context.Context, req resource.UpdateRequest
 	cfg, err := r.client.UpdateAgeGateConfig(ctx, plan.RepositoryKey.ValueString(), client.AgeGateConfigRequest{
 		Enabled:    plan.Enabled.ValueBool(),
 		MinAgeDays: plan.MinAgeDays.ValueInt64(),
+		Mode:       optionalString(plan.Mode),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating age gate", err.Error())
@@ -151,5 +166,6 @@ func ageGateToModel(c *client.AgeGateConfig) ageGateResourceModel {
 		RepositoryKey: types.StringValue(c.RepositoryKey),
 		Enabled:       types.BoolValue(c.Enabled),
 		MinAgeDays:    types.Int64Value(c.MinAgeDays),
+		Mode:          types.StringValue(c.Mode),
 	}
 }

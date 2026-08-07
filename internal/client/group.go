@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -29,6 +30,26 @@ func (c *Client) CreateGroup(ctx context.Context, req GroupRequest) (*Group, err
 		return nil, err
 	}
 	return &out, nil
+}
+
+// FindGroupByName resolves a group name to its group. The search endpoint does
+// a substring match, so we filter the results for an exact name.
+func (c *Client) FindGroupByName(ctx context.Context, name string) (*Group, error) {
+	q := url.Values{}
+	q.Set("search", name)
+	q.Set("per_page", "100") // ponytail: an exact match hiding past 100 substring collisions is pathological
+	var out struct {
+		Items []Group `json:"items"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/groups?"+q.Encode(), nil, &out); err != nil {
+		return nil, err
+	}
+	for i := range out.Items {
+		if out.Items[i].Name == name {
+			return &out.Items[i], nil
+		}
+	}
+	return nil, &APIError{StatusCode: http.StatusNotFound, Message: fmt.Sprintf("no group named %q", name)}
 }
 
 func (c *Client) GetGroup(ctx context.Context, id string) (*Group, error) {

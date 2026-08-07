@@ -37,10 +37,10 @@ func (d *groupDataSource) Metadata(_ context.Context, req datasource.MetadataReq
 
 func (d *groupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = dschema.Schema{
-		MarkdownDescription: "Looks up an existing group by its UUID.",
+		MarkdownDescription: "Looks up an existing group by its name, resolving the UUID (`id`) you pass to memberships and project memberships.",
 		Attributes: map[string]dschema.Attribute{
-			"id":           dschema.StringAttribute{Required: true, MarkdownDescription: "Group UUID to look up."},
-			"name":         dschema.StringAttribute{Computed: true},
+			"name":         dschema.StringAttribute{Required: true, MarkdownDescription: "Group name to look up."},
+			"id":           dschema.StringAttribute{Computed: true, MarkdownDescription: "Resolved group UUID."},
 			"description":  dschema.StringAttribute{Computed: true},
 			"member_count": dschema.Int64Attribute{Computed: true},
 			"external_source": dschema.StringAttribute{
@@ -63,7 +63,7 @@ func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	g, err := d.client.GetGroup(ctx, cfg.ID.ValueString())
+	g, err := d.client.FindGroupByName(ctx, cfg.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading group", err.Error())
 		return
