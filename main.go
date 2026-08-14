@@ -10,7 +10,7 @@ import (
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/provider"
 )
 
-//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate -provider-name artifactkeeper
+//go:generate ./tools/gen-docs.sh
 
 // version is set by the release process via -ldflags; "dev" for local builds.
 var version = "dev"
