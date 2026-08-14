@@ -31,6 +31,7 @@ resource "artifactkeeper_migration_source" "nexus" {
 resource "artifactkeeper_migration_job" "hosted" {
   source_connection_id  = artifactkeeper_migration_source.nexus.id
   include_repos         = ["tf-acc-repo"]
+  repo_mappings         = { "tf-acc-repo" = "tf-acc-renamed" }
   include_cached_remote = false
   conflict_resolution   = "skip"
   dry_run               = true
@@ -44,6 +45,8 @@ resource "artifactkeeper_migration_job" "hosted" {
 						"artifactkeeper_migration_job.hosted", "source_connection_id",
 						"artifactkeeper_migration_source.nexus", "id"),
 					resource.TestCheckResourceAttr("artifactkeeper_migration_job.hosted", "include_repos.#", "1"),
+					resource.TestCheckResourceAttr("artifactkeeper_migration_job.hosted",
+						"repo_mappings.tf-acc-repo", "tf-acc-renamed"),
 				),
 			},
 			{
@@ -53,7 +56,7 @@ resource "artifactkeeper_migration_job" "hosted" {
 				// The API returns config as an opaque blob, so configured inputs
 				// can't be recovered on import and are carried from prior state.
 				ImportStateVerifyIgnore: []string{
-					"include_repos", "exclude_repos", "exclude_paths",
+					"include_repos", "exclude_repos", "exclude_paths", "repo_mappings",
 					"include_users", "include_groups", "include_permissions",
 					"include_cached_remote", "dry_run", "conflict_resolution",
 					"concurrent_transfers", "throttle_delay_ms", "verify_checksums",

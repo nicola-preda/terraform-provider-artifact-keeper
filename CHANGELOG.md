@@ -2,18 +2,49 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.7.1` = Artifact Keeper 1.7.1);
+the Artifact Keeper release it is validated against (`v1.7.4` = Artifact Keeper 1.7.4);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
-## [Unreleased]
+## [1.7.4] - 2026-08-14
+
+Validated against Artifact Keeper 1.7.4, with the acceptance suite run live against that
+backend image. The quietest bump yet on the provider's side: `routes.rs` is byte-identical
+between 1.7.1 and 1.7.4, and a struct-level diff of the entire API surface finds two added
+fields and nothing removed, renamed or retyped. One of the two is `repo_mappings`, which this
+release ships. (There is no 1.7.2 upstream; 1.7.3 carries the work and 1.7.4 is
+security-only.)
 
 ### Added
 
-- `artifactkeeper_migration_job`: `repo_mappings` attribute (source repo key -> target key) to
-  rename repositories during migration. **Proton branch only, not released**: the backend
-  capability is in neither Artifact Keeper 1.7.0 nor 1.7.1, and is pending upstream as
-  [artifact-keeper#3038](https://github.com/artifact-keeper/artifact-keeper/pull/3038). It ships
-  once that lands in a released backend.
+- `artifactkeeper_migration_job`: `repo_mappings` attribute, a source repo key -> target key
+  map that renames repositories as they migrate (Artifact Keeper 1.7.3, #3035). Sources you
+  don't list keep their name, and a renamed member of a migrated virtual repository keeps its
+  membership. An existing target is reused and the source's artifacts merge into it. Pair it
+  with `include_repos`, which lists the *source* keys. Changing the map replaces the job, like
+  the rest of the migration config.
+
+  Targets are validated like a hand-created repository key, and two sources may not share one
+  destination. **Both checks run when the job runs, not when it is created**, so a bad map
+  applies cleanly and then aborts the migration; `terraform apply` is not where you find out.
+  Verified against 1.7.4: `POST /migrations` returns `201` for a duplicate target and for a
+  malformed target key alike.
+
+### Notes on the 1.7.3 backend, for anyone upgrading
+
+No provider change was needed for these, but they change what the same config does:
+
+- **The fine-grained permissions API is admin-only** (#3229). `GET /permissions`,
+  `GET /permissions/{id}` and `DELETE /permissions/{id}` now require admin, joining the writes.
+  A non-admin token that managed `artifactkeeper_permission` will start getting `403` on read
+  and destroy. The usual IaC posture (a global-admin token) is unaffected.
+- **`artifactkeeper_repository_npm_scope_policy` accepts an inactive payload on non-remote
+  repositories** (#3304), where create/update previously rejected it.
+- **Docker Hub pull-through now authenticates anonymously** even when upstream credentials are
+  set, a consequence of the GHSA-78h6 fix. If you set `artifactkeeper_repository_upstream_auth`
+  on a Docker Hub proxy to lift rate limits, it no longer has that effect, and the advisory asks
+  you to rotate those credentials.
+- **Storage totals step up on upgrade day** (#3134, #3249): OCI blob and proxy-cached bytes now
+  count. Display-only, quota admission is unchanged, but alerts on storage growth will fire.
 
 ## [1.7.1] - 2026-08-07
 

@@ -37,26 +37,31 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.7.1** (2026-08-07) |
-| Provider changes needed | additive only (`age_gate.mode`), plus two coverage gaps closed |
-| Acceptance suite | run live against the 1.7.1 backend image (2026-08-07); all 12 `TestAcc` functions pass |
+| Validated against | **Artifact Keeper 1.7.4** (2026-08-14) |
+| Provider changes needed | additive only (`migration_job.repo_mappings`) |
+| Acceptance suite | run live against the 1.7.4 backend image (2026-08-14); all 12 `TestAcc` functions pass |
 
-Drop-in from 1.7.0: a mechanical diff of every `Serialize`/`Deserialize` struct under
-`api/handlers/`, `services/` and `models/` between the two tags shows **additions only** —
-nothing removed, renamed, or retyped. The only provider-relevant one is the age gate's new
-`mode` field (now modelled). The rest don't reach the provider: per-repo age-gate response
-fields (`RepositoryDetails.age_gate_mode`, `RepoInfo.age_gate_mode`), review-flow internals
-(`AgeGateReview.basis_*`, `AgeGateSubstitution`), upload-session internals, and the
-`SystemStats` proxy-cache counters. One route was added,
-`POST /repositories/{key}/storage-gc` (an imperative action, not modelled). Re-check each
-backend bump with the procedure below.
+Drop-in from 1.7.1, and the cleanest bump so far. `routes.rs` is **byte-identical** between
+the two tags, so no consumed endpoint moved, was added, or was removed. A mechanical diff of
+every `Serialize`/`Deserialize` struct under `api/handlers/`, `services/` and `models/`
+turns up exactly **two added fields across the whole API surface** and no removal, rename or
+retype: `MigrationConfig.repo_mappings` (now modelled) and
+`BackupManifest.artifacts_unreadable` (backup runs aren't modelled). No enum variant was
+dropped either. 1.7.2 was never released; 1.7.3 carries the bulk of the work and 1.7.4 is
+security-only. The churn in the diff is almost entirely package wire protocols, proxy-cache
+correctness, and tests, none of which the provider touches.
+
+1.7.3 does change **authz and behavior** on surface the provider uses, without changing any
+schema. The load-bearing ones are in Caveats below: the fine-grained permissions API is now
+admin-only, and the npm scope-policy payload rules relaxed. Re-check each backend bump with
+the procedure below.
 
 ## Versioning & releasing
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.7.1` (AK 1.7.1); consumers pin
-`~> 1.7.1`. A provider-only fix that keeps the same validated AK version is rare; if one
+(`internal/provider/provider.go`). This release is `v1.7.4` (AK 1.7.4); consumers pin
+`~> 1.7.4`. A provider-only fix that keeps the same validated AK version is rare; if one
 is needed, bump the patch ahead of AK and note it in the changelog.
 
 Cutting a release:
@@ -110,9 +115,9 @@ that handler on a bump.
 ## How to re-check drift on a version bump
 
 When the backend moves to a new tag (say `v1.8.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.7.1`).
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.7.4`).
 
-Fastest first pass, and the one that actually caught the 1.7.1 delta: diff every
+Fastest first pass, and the one that actually caught both the 1.7.1 and 1.7.4 deltas: diff every
 serializable struct between the two tags, rather than reading handlers one by one. Extract
 `pub struct X { … }` field lists from `api/handlers/`, `services/` and `models/` at both
 tags, sort, and diff. Additions are safe; a removal, rename or retype of a field the
@@ -123,11 +128,11 @@ BK=~/git/github.com/artifact-keeper/artifact-keeper
 git -C "$BK" fetch --tags
 
 # 1. Did any consumed route move? (path + HTTP method)
-git -C "$BK" diff v1.7.1 v1.8.0 -- backend/src/api/routes.rs
+git -C "$BK" diff v1.7.4 v1.8.0 -- backend/src/api/routes.rs
 
 # 2. Diff each consumed struct. Repeat per row in the map above.
-git -C "$BK" diff v1.7.1 v1.8.0 -- backend/src/api/handlers/repositories.rs
-git -C "$BK" diff v1.7.1 v1.8.0 -- backend/src/api/handlers/peers.rs
+git -C "$BK" diff v1.7.4 v1.8.0 -- backend/src/api/handlers/repositories.rs
+git -C "$BK" diff v1.7.4 v1.8.0 -- backend/src/api/handlers/peers.rs
 # … etc. Inspect a struct at the new tag with:
 git -C "$BK" grep -n 'struct RepositoryResponse' v1.8.0
 ```
@@ -193,16 +198,35 @@ For a big jump, fan the per-row diffs out across parallel workers.
   members 409s when the group has an `external_source` (`oidc`/`saml`/`ldap`). The
   new computed `group.external_source` attribute surfaces the owner; only local
   groups are membership-manageable from Terraform.
+- **The permissions API is admin-only (1.7.3, #3229).** `GET /permissions`,
+  `GET /permissions/{id}` and `DELETE /permissions/{id}` gained `require_admin()`, joining the
+  writes that already had it, so `artifactkeeper_permission` now needs a global-admin token for
+  Read and Delete as well as Create/Update. A non-admin token that worked on 1.7.1 gets `403`.
+  No schema change; the reads previously extracted no auth at all, which is what the fix closes.
+- **Docker Hub pull-through ignores upstream credentials (1.7.4, GHSA-78h6-3wp8-2542).**
+  Credentialed Docker Hub pull-through now authenticates anonymously. Setting
+  `repository_upstream_auth` on a Docker Hub proxy no longer lifts its rate limits, and the
+  advisory asks for those credentials to be rotated. The resource still writes them; the backend
+  just doesn't use them on that path.
+- **npm scope policy accepts an inactive payload on non-remote repos (1.7.3, #3304).** A
+  relaxation: `repository_npm_scope_policy` create/update on a hosted or virtual repository no
+  longer 400s on an inactive payload.
+- **Storage totals change basis (1.7.3, #3134, #3249).** `total_storage_bytes` now sums the usage
+  ledger, folding in OCI blob and proxy-cached bytes. Display-only, and the provider doesn't read
+  it, but quota-adjacent dashboards step up on upgrade day. Quota admission is unchanged, so no
+  repository managed by `artifactkeeper_repository` becomes over-quota as a result.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.7.1 (**49 resources + 4 data sources**).
+Not bugs; scope decisions. Current as of v1.7.4 (**49 resources + 4 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
 sub-config endpoints have `repository_*` resources (`repository_security`,
 `repository_cache_ttl`, `repository_npm_scope_policy`, `repository_routing_rules`,
 `repository_pypi_track`, `repository_upstream_auth`, `repository_release_target`), and the
 v1.7.1 pass closed the last two API-only gaps.
+
+**Closed in v1.7.4:** `migration_job.repo_mappings`, the only settable field 1.7.3 added.
 
 **Closed in v1.7.1:** `age_gate.mode`; `peer_instance_label` (peer key/value labels, which
 `sync_policy` match rules consume); `user_api_token` (admin minting a token for another
@@ -236,7 +260,7 @@ endpoint, as its own source comments note).
 
 **Not a provider gap, worth knowing:** the web UI ships an admin rate-limit page
 (`src/lib/api/rate-limits.ts`: `GET /admin/rate-limits`, `GET/POST/DELETE
-/admin/rate-limits/exemptions`) whose backend endpoints **do not exist** in 1.7.1 —
+/admin/rate-limits/exemptions`) whose backend endpoints **do not exist** in 1.7.4 —
 rate-limit exemptions are still env-only (`RATE_LIMIT_EXEMPT_*`). Nothing to model until
 the backend side lands (web #270 / backend #680).
 
@@ -260,7 +284,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.7.1 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.7.4 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh
@@ -284,18 +308,23 @@ docker compose -f docker-compose.test.yml down -v
 without them terraform-plugin-testing registers the provider under the legacy `-`
 namespace on `registry.terraform.io`, which `tofu` rejects.
 
-The acceptance suite is pinned to the 1.7.1 backend image and was last run live against 1.7.1
-(2026-08-07): all 12 `TestAcc` functions pass. It exercises the great majority
+The acceptance suite is pinned to the 1.7.4 backend image and was last run live against 1.7.4
+(2026-08-14): all 12 `TestAcc` functions pass. It exercises the great majority
 of resources. The smoke/prereq tests create the full post-baseline set alongside
 `repository`/`user`/`group`/`permission` and the data sources, including the v1.7.1
-additions: `age_gate` now sets `mode = "first_seen"` on an npm remote (exercising the
+additions: `age_gate` sets `mode = "first_seen"` on an npm remote (exercising the
 (format, mode) enforcement path), and `user_api_token` mints a token for the test user.
 `migration_job` (and, via it, `migration_source`) are covered too:
 `TestAccMigrationJobResource` creates a connection and a pending job, since neither needs a
-reachable source. Only `peer` (and therefore `peer_instance_label`), `sso_*`, `plugin`, and
+reachable source, and sets `repo_mappings` so the v1.7.4 addition is exercised on the wire
+(verified separately by hand: the job response echoes the stored map back). The client
+deliberately doesn't model the response's `config` object, so no configured input is
+recoverable on import; `repo_mappings` therefore sits in that test's
+`ImportStateVerifyIgnore` alongside the rest of them.
+Only `peer` (and therefore `peer_instance_label`), `sso_*`, `plugin`, and
 actually *running* a migration (start / test-connection) sit outside it; they need external
 systems (a reachable peer, an IdP, an installable WASM plugin git repo, a live source
-registry) to exercise. `plugin` is source-verified against 1.7.1 (every endpoint, field, and
+registry) to exercise. `plugin` is source-verified against 1.7.4 (every endpoint, field, and
 the `active` status string checked against `handlers/plugins.rs`) plus unit-tested, but has
 not had a live end-to-end apply; `peer_instance_label` is source-verified the same way
 against `handlers/peer_instance_labels.rs`.

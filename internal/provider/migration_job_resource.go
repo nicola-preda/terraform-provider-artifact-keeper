@@ -110,7 +110,7 @@ func (r *migrationJobResource) Schema(_ context.Context, _ resource.SchemaReques
 			"repo_mappings": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Source repository key -> destination repository key rename map. Migrated artifacts land in the destination (target) repo instead of one named after the source, e.g. `{ \"network-team-python\" = \"network-pypi\" }`. Sources not listed keep their name. Pair with `include_repos` (which lists the *source* keys).",
+				MarkdownDescription: "Source repository key -> destination repository key rename map. Migrated artifacts land in the destination (target) repo instead of one named after the source, e.g. `{ \"network-team-python\" = \"network-pypi\" }`. Sources not listed keep their name. Pair with `include_repos` (which lists the *source* keys). An existing target is reused and the source's artifacts are merged into it. Targets must be valid repository keys and two sources may not share one target, but the backend checks both only when the job runs, so a bad map applies cleanly here and aborts the migration later.",
 				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"include_users": schema.BoolAttribute{

@@ -7,7 +7,7 @@ can change in the UI, is a Terraform resource.
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.7.1** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.7.4** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
 
 ## What you can manage
@@ -46,7 +46,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.7.1"
+      version = "~> 1.7.4"
     }
   }
 }
@@ -100,9 +100,9 @@ provider "artifactkeeper" {
 
 ## Versioning
 
-The provider version tracks the Artifact Keeper version it's validated against: `v1.7.1`
-targets Artifact Keeper 1.7.1, and every release's acceptance suite is run against that
-exact backend image. Pin with `~> 1.7.1`.
+The provider version tracks the Artifact Keeper version it's validated against: `v1.7.4`
+targets Artifact Keeper 1.7.4, and every release's acceptance suite is run against that
+exact backend image. Pin with `~> 1.7.4`.
 
 ## Development
 
