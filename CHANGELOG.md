@@ -5,6 +5,21 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.8.0` = Artifact Keeper 1.8.0);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [1.8.2] - 2026-08-20
+
+Provider-only release, still validated against Artifact Keeper 1.8.0, so
+`ValidatedUpstreamVersion` is unchanged. Functionally identical to 1.8.0, plus a corrected
+version pin in the registry landing page and examples.
+
+**Use this rather than 1.8.0 or 1.8.1.** 1.8.0 shipped `~> 1.7.0` in the example config the
+registry renders as its landing page. Rebuilding to fix that changed every archive checksum,
+because GoReleaser derives archive timestamps from the commit, and the registry had already
+recorded the originals. It keeps that index record even after the version is deleted and
+re-ingested, so `terraform init` fails with `checksum list has unexpected SHA-256 hash`.
+Rebuilding the original commit does not help either: three builds of the same tree produced
+three different checksums, so the release is not reproducible and no rebuild can ever match a
+recorded hash. Both numbers are unusable; a `~> 1.8.0` constraint resolves here.
+
 ## [1.8.0] - 2026-08-20
 
 Validated against Artifact Keeper 1.8.0. A big release (40 commits, 109 backend source files)
