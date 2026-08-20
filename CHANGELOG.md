@@ -5,7 +5,7 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.8.0` = Artifact Keeper 1.8.0);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
-## [Unreleased]
+## [1.8.0] - 2026-08-20
 
 Validated against Artifact Keeper 1.8.0. A big release (40 commits, 109 backend source files)
 that is nonetheless a drop-in: a mechanical diff of every serializable struct finds 227 added
