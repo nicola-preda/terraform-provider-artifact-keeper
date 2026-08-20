@@ -71,7 +71,7 @@ Cutting a release:
 
 1. Run the drift check below. Set `ValidatedUpstreamVersion` and the compatibility table
    to the AK version you validated against, in the same commit.
-2. Tag `v<that version>` (e.g. `v1.7.0`) and push it. The `release` workflow runs
+2. Tag `v<that version>` (e.g. `v1.8.0`) and push it. The `release` workflow runs
    GoReleaser, which builds the per-platform archives, `SHA256SUMS`, the GPG signature,
    and the registry manifest, and attaches them to a GitHub release.
 3. First release only: upload the GPG public key to the Terraform Registry and add the
