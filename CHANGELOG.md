@@ -2,8 +2,62 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.7.4` = Artifact Keeper 1.7.4);
+the Artifact Keeper release it is validated against (`v1.8.0` = Artifact Keeper 1.8.0);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
+
+## [Unreleased]
+
+Validated against Artifact Keeper 1.8.0. A big release (40 commits, 109 backend source files)
+that is nonetheless a drop-in: a mechanical diff of every serializable struct finds 227 added
+fields and **no removal, rename or retype**, the enum diff finds no dropped variant, and the
+only route that disappears is a package wire protocol path. Two of the endpoints 1.8.0 adds
+are declarative config and are modelled here; the rest is proxy-scan visibility, the TOTP
+enrollment exchange, and client-shape aliases for cargo and Helm.
+
+### Added
+
+- `artifactkeeper_repository_egress_proxy`: how one remote repository reaches its upstream.
+  `mode` is `inherit` (follow the process-wide proxy environment), `direct` (bypass it) or
+  `explicit` (this repository's own `proxy_url` and `no_proxy`). The per-repository setting
+  replaces `HTTP_PROXY`/`NO_PROXY` for that repository rather than merging with them. The API
+  returns `proxy_url` with credentials redacted to `***` and the URL normalised, so a
+  configured value is kept verbatim and `proxy_credentials_configured` is the observable half.
+  Destroy resets the repository to `inherit` rather than leaving an egress control behind.
+- `artifactkeeper_totp_policy`: the system-wide 2FA enforcement policy (`disabled`,
+  `required_for_admins`, `required_for_all`), plus computed `source` and `editable`. Two ways
+  an apply fails with `409`, both deliberate: `TOTP_POLICY` in the environment pins the policy,
+  and *tightening* it requires the admin the provider authenticates as to have TOTP enrolled
+  already. Relaxing is never refused. Enrollment counts are in the response but not modelled;
+  they're monitoring data that moves on its own.
+
+### Changed
+
+- A login that can't complete because the account owes a TOTP challenge or enrollment now fails
+  with an error naming 2FA and pointing at token auth. 1.8.0 answers such a login with `200` and
+  an empty `access_token`, which previously surfaced as a bare "no access_token was returned".
+
+### Upgrade notes
+
+- **`repository_security.block_on_policy_violation` means something new.** 1.8.0 adds an inline
+  severity gate on proxy and OCI pulls (#3243/#3246) and derives it from fields this provider
+  already writes, with no schema change to signal it. The flag is read as an opt-in to
+  *thresholding*, so `false` now blocks on **any** finding; an absent scan-config row reads the
+  same way, which reaches virtual repositories that never had one. A repository with
+  `scan_on_proxy = true` and the flag off can start refusing artifacts on upgrade day off an
+  unchanged Terraform config.
+- **`artifactkeeper_peer_network_profile` does not work against any released backend**, and did
+  not against 1.7.4 either. It sends `PUT /peers/{id}/network-profile`, which is where the
+  handler's doc comment, its OpenAPI annotation and its unit test all place it, but `routes.rs`
+  merges the router into the `/peers` nest without the `/:id` prefix. The only mounted path is
+  `PUT /api/v1/peers/network-profile`, served by a handler that extracts a peer id from a route
+  that has none. Needs an upstream fix; the resource is inert until then.
+
+### Coverage
+
+Every one of the 455 documented endpoints on 1.8.0 was classified, and all 143 request structs
+were field-diffed against the client, with nothing left unclassified — see
+[MAINTAINING.md](MAINTAINING.md#capability-gaps-backend-offers-provider-doesnt-model). The
+acceptance suite was run live against the 1.8.0 image: 14 pass, 0 fail.
 
 ## [1.7.4] - 2026-08-14
 

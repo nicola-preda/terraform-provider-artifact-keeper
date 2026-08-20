@@ -7,25 +7,25 @@ can change in the UI, is a Terraform resource.
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.7.4** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.8.0** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
 
 ## What you can manage
 
-49 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
+51 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
 the admin UI; [`docs/`](docs/) has the full schema for every resource.
 
 | What you want to do | Resources |
 |---|---|
 | Create hosted, proxy and virtual repositories, and set quotas, anonymous access, versioning, project ownership | `repository` |
-| Tune a repository's proxy behaviour: cache TTL, upstream credentials, path rewrites, npm scope limits, PyPI tracks | `repository_cache_ttl`, `repository_upstream_auth`, `repository_routing_rules`, `repository_npm_scope_policy`, `repository_pypi_track` |
+| Tune a repository's proxy behaviour: cache TTL, upstream credentials, egress proxy, path rewrites, npm scope limits, PyPI tracks | `repository_cache_ttl`, `repository_upstream_auth`, `repository_egress_proxy`, `repository_routing_rules`, `repository_npm_scope_policy`, `repository_pypi_track` |
 | Gate what enters a repository: vulnerability scanning, age-based holds on fresh upstream releases, curation rules | `repository_security`, `age_gate`, `curation_rule` |
 | Expire and clean up artifacts on a schedule | `lifecycle_policy` |
 | Promote artifacts between staging and release repositories, with rules and quality bars | `promotion_rule`, `repository_release_target`, `quality_gate`, `security_policy`, `license_policy` |
 | Sign metadata and artifacts, and manage the signing keys | `signing_key`, `repository_signing_config` |
 | Onboard teams: projects, groups, users, per-repository permissions | `project`, `project_membership`, `group`, `group_membership`, `user`, `user_role_assignment`, `permission` |
 | Issue credentials for CI: service accounts, scoped tokens, per-repo tokens, keyless OIDC from your CI provider | `service_account`, `service_account_token`, `api_token`, `user_api_token`, `repo_token`, `ci_oidc_provider`, `ci_oidc_identity_mapping` |
-| Wire up SSO against your IdP | `sso_oidc`, `sso_saml`, `sso_ldap` |
+| Wire up SSO against your IdP, and require 2FA of local accounts | `sso_oidc`, `sso_saml`, `sso_ldap`, `totp_policy` |
 | Replicate between instances and target peers by label | `peer`, `peer_repository_subscription`, `peer_instance_label`, `peer_network_profile`, `sync_policy`, `remote_instance` |
 | Import from a legacy registry (Nexus, Artifactory) | `migration_source`, `migration_job` |
 | Notify on events | `webhook`, `email_subscription` |
@@ -46,7 +46,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.7.4"
+      version = "~> 1.8.0"
     }
   }
 }
@@ -100,9 +100,9 @@ provider "artifactkeeper" {
 
 ## Versioning
 
-The provider version tracks the Artifact Keeper version it's validated against: `v1.7.4`
-targets Artifact Keeper 1.7.4, and every release's acceptance suite is run against that
-exact backend image. Pin with `~> 1.7.4`.
+The provider version tracks the Artifact Keeper version it's validated against: `v1.8.0`
+targets Artifact Keeper 1.8.0, and every release's acceptance suite is run against that
+exact backend image. Pin with `~> 1.8.0`.
 
 ## Development
 

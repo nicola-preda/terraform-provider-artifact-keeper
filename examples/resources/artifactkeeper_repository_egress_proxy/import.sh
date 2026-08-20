@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_egress_proxy.npm_proxy npm-remote

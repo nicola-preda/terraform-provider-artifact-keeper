@@ -1,4 +1,4 @@
-# Minimal Artifact Keeper 1.7.0 stack for running the provider's acceptance tests.
+# Minimal Artifact Keeper 1.8.0 stack for running the provider's acceptance tests.
 #
 #   docker compose -f docker-compose.test.yml up -d
 #   TF_ACC=1 \
@@ -39,7 +39,7 @@ services:
       start_period: 20s
 
   backend:
-    image: ghcr.io/artifact-keeper/artifact-keeper-backend:1.7.4
+    image: ghcr.io/artifact-keeper/artifact-keeper-backend:1.8.0
     depends_on:
       postgres: { condition: service_healthy }
       opensearch: { condition: service_healthy }

@@ -37,31 +37,34 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.7.4** (2026-08-14) |
-| Provider changes needed | additive only (`migration_job.repo_mappings`) |
-| Acceptance suite | run live against the 1.7.4 backend image (2026-08-14); all 12 `TestAcc` functions pass |
+| Validated against | **Artifact Keeper 1.8.0** (2026-08-19) |
+| Provider changes needed | additive only (`repository_egress_proxy`, `totp_policy`) |
+| Acceptance suite | run live against the 1.8.0 backend image (2026-08-20); all 14 `TestAcc` functions pass |
 
-Drop-in from 1.7.1, and the cleanest bump so far. `routes.rs` is **byte-identical** between
-the two tags, so no consumed endpoint moved, was added, or was removed. A mechanical diff of
-every `Serialize`/`Deserialize` struct under `api/handlers/`, `services/` and `models/`
-turns up exactly **two added fields across the whole API surface** and no removal, rename or
-retype: `MigrationConfig.repo_mappings` (now modelled) and
-`BackupManifest.artifacts_unreadable` (backup runs aren't modelled). No enum variant was
-dropped either. 1.7.2 was never released; 1.7.3 carries the bulk of the work and 1.7.4 is
-security-only. The churn in the diff is almost entirely package wire protocols, proxy-cache
-correctness, and tests, none of which the provider touches.
+A much bigger release than 1.7.4 (40 commits, 109 backend source files, ~36k inserted lines)
+that is still a drop-in. The mechanical struct diff over `api/handlers/`, `services/` and
+`models/` finds **227 added fields and not one removal, rename or retype**, and the enum
+diff finds **no dropped variant**. On the route table, exactly one path disappears between
+the tags (an alpine signing-key path, a package wire protocol) and 21 appear. So nothing the
+provider reads or sends broke.
 
-1.7.3 does change **authz and behavior** on surface the provider uses, without changing any
-schema. The load-bearing ones are in Caveats below: the fine-grained permissions API is now
-admin-only, and the npm scope-policy payload rules relaxed. Re-check each backend bump with
-the procedure below.
+Two of the new routes are declarative config and are now modelled:
+`GET`/`PUT /repositories/{key}/egress-proxy` and `GET`/`PUT /admin/settings/totp-policy`.
+The rest of the new surface is proxy-scan visibility (`/security/proxy-scans`,
+`/security/proxy-sbom`, `/admin/proxy-scan-verdicts/{digest}`), the TOTP enrollment exchange,
+and `/api/cargo` + `/api/helm` client-shape aliases: read-only, imperative, or wire protocol.
+
+What does change is **behavior**, on surface the provider already writes. The proxy severity
+gate is the load-bearing one and it is in Caveats below: in 1.8.0 the meaning of
+`repository_security.block_on_policy_violation = false` is not what it was. Re-check each
+backend bump with the procedure below.
 
 ## Versioning & releasing
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.7.4` (AK 1.7.4); consumers pin
-`~> 1.7.4`. A provider-only fix that keeps the same validated AK version is rare; if one
+(`internal/provider/provider.go`). This release is `v1.8.0` (AK 1.8.0); consumers pin
+`~> 1.8.0`. A provider-only fix that keeps the same validated AK version is rare; if one
 is needed, bump the patch ahead of AK and note it in the changelog.
 
 Cutting a release:
@@ -93,6 +96,8 @@ Rust names (provider Go names differ where noted).
 | `repository_routing_rules` | `GET/POST/DELETE /repositories/{key}/routing-rules` (POST replaces the ordered list) | `handlers/repositories.rs`, `services/routing_rules.rs` | `RoutingRulesResponse`, `SetRoutingRulesRequest`, `RoutingRule` |
 | `repository_pypi_track` | `GET /…/pypi-tracks`, `PUT/DELETE /…/pypi-tracks/{project}` (per project) | `handlers/repositories.rs` | `PypiTrackResponse`, `PypiTracksListResponse`, `PypiTrackRequest` |
 | `repository_upstream_auth` | `PUT /repositories/{key}/upstream-auth` (write-only, no GET) | `handlers/repositories.rs` | `UpstreamAuthRequest` |
+| `repository_egress_proxy` | `GET/PUT /repositories/{key}/egress-proxy` (remote repos only; `proxy_url` reads back redacted) | `handlers/repositories.rs`, `services/egress_proxy.rs` | `EgressProxyRequest`, `EgressProxyResponse`, `EgressProxyMode` |
+| `totp_policy` | `GET/PUT /admin/settings/totp-policy` | `handlers/admin.rs`, `services/totp_policy.rs` | `TotpPolicyResponse`, `UpdateTotpPolicyRequest`, `TotpPolicy` |
 | `repository_release_target` | `GET/PUT /promotion/repositories/{key}/release-target` | `handlers/promotion.rs` | `ReleaseTargetResponse`, `SetReleaseTargetRequest` |
 | `sso_oidc` | `POST /admin/sso/oidc`, `GET/PUT/DELETE …/{id}` | `handlers/sso_admin.rs` (routes), `services/auth_config_service.rs` (structs) | `OidcConfigResponse`, `Create/UpdateOidcConfigRequest` |
 | `sso_ldap` | `POST /admin/sso/ldap`, `GET/PUT/DELETE …/{id}` | same as OIDC | `LdapConfigResponse`, `Create/UpdateLdapConfigRequest` |
@@ -114,8 +119,8 @@ that handler on a bump.
 
 ## How to re-check drift on a version bump
 
-When the backend moves to a new tag (say `v1.8.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.7.4`).
+When the backend moves to a new tag (say `v1.9.0`), verify the provider before
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.8.0`).
 
 Fastest first pass, and the one that actually caught both the 1.7.1 and 1.7.4 deltas: diff every
 serializable struct between the two tags, rather than reading handlers one by one. Extract
@@ -128,14 +133,28 @@ BK=~/git/github.com/artifact-keeper/artifact-keeper
 git -C "$BK" fetch --tags
 
 # 1. Did any consumed route move? (path + HTTP method)
-git -C "$BK" diff v1.7.4 v1.8.0 -- backend/src/api/routes.rs
+git -C "$BK" diff v1.8.0 v1.9.0 -- backend/src/api/routes.rs
 
 # 2. Diff each consumed struct. Repeat per row in the map above.
-git -C "$BK" diff v1.7.4 v1.8.0 -- backend/src/api/handlers/repositories.rs
-git -C "$BK" diff v1.7.4 v1.8.0 -- backend/src/api/handlers/peers.rs
+git -C "$BK" diff v1.8.0 v1.9.0 -- backend/src/api/handlers/repositories.rs
+git -C "$BK" diff v1.8.0 v1.9.0 -- backend/src/api/handlers/peers.rs
 # … etc. Inspect a struct at the new tag with:
-git -C "$BK" grep -n 'struct RepositoryResponse' v1.8.0
+git -C "$BK" grep -n 'struct RepositoryResponse' v1.9.0
 ```
+
+`routes.rs` alone is not the whole route table: most paths are declared in the per-handler
+`router()` functions it nests, and a handler can be mounted at more than one prefix. The
+1.8.0 pass built the full table instead, from the `#[utoipa::path(...)]` annotations (they
+carry `context_path`, so the path is complete) plus the `.route(...)` registrations that
+carry no annotation. Worth redoing that way on a big jump: it is what surfaced
+`/repositories/{key}/egress-proxy` and `/admin/settings/totp-policy`, neither of which shows
+up in a `routes.rs` diff.
+
+Also worth doing on a big jump, and what the 1.8.0 pass used to confirm coverage rather than
+just compatibility: extract every JSON field name from `internal/client/*.go` and every field
+of every `Deserialize` request struct in the backend, then diff. A request field that appears
+in no client file is either an unmodelled input or a deliberate scope decision, and either way
+it should be one of the two, not an oversight.
 
 **What counts as breaking** (needs a provider change), for a field the provider
 sends or reads:
@@ -211,6 +230,34 @@ For a big jump, fan the per-row diffs out across parallel workers.
 - **npm scope policy accepts an inactive payload on non-remote repos (1.7.3, #3304).** A
   relaxation: `repository_npm_scope_policy` create/update on a hosted or virtual repository no
   longer 400s on an inactive payload.
+- **The proxy severity gate reinterprets `block_on_policy_violation` (1.8.0, #3243/#3246).**
+  The biggest behavioral change in this release, on a field `repository_security` already
+  writes, with no schema change to warn you. 1.8.0 adds an inline gate on proxy/OCI pulls
+  and derives it from the existing pair: `block_on_policy_violation = true` means
+  "enforce `severity_threshold`", and `false` means **block on any finding**, because
+  upstream reads the flag as an opt-in to *thresholding* rather than to *blocking*. A repo
+  with `scan_on_proxy = true` and the flag off therefore starts refusing proxied artifacts
+  on upgrade day, off a Terraform config that did not change. An absent scan-config row is
+  read the same way, which reaches virtual repositories that never had a row of their own.
+  Audit `scan_on_proxy` before upgrading, and set `block_on_policy_violation = true` with an
+  explicit `severity_threshold` wherever the gate should discriminate rather than block all.
+- **A TOTP policy makes username/password provider auth stop working (1.8.0, #2805).**
+  With `totp_policy` set to anything but `disabled`, `POST /auth/login` for a covered local
+  account returns **200 with an empty `access_token`** and an enrollment or challenge ticket
+  instead of a session. The client turns that into a named error rather than a confusing
+  401 later (`internal/client/auth.go`), but the fix is to configure the provider with
+  `ARTIFACT_KEEPER_TOKEN`. Tokens, service accounts and package-client basic auth are exempt
+  from the policy by design, so a token-authenticated provider is unaffected.
+- **CSRF middleware on the whole `/api/v1` nest (1.8.0, #3065).** State-changing requests
+  authenticated by the **session cookie** must carry `X-Requested-With`. The provider is
+  exempt on both paths it uses: `violates_csrf_contract` requires a cookie credential *and*
+  a browser-shaped request, so a Bearer/API-token call never matches, and neither does
+  `POST /auth/login`, which carries no cookie at all. No provider change needed; noted
+  because a 403 mentioning CSRF from any other client is this layer.
+- **The global request timeout no longer covers artifact byte transfers (1.8.0, #3263).**
+  `GLOBAL_REQUEST_TIMEOUT_SECS` used to abort slow uploads mid-body, turning a duration cap
+  into a size cap. Upload/download routes are now exempt. The provider moves no artifact
+  bytes, so this is upgrade-note context, not a provider concern.
 - **Storage totals change basis (1.7.3, #3134, #3249).** `total_storage_bytes` now sums the usage
   ledger, folding in OCI blob and proxy-cached bytes. Display-only, and the provider doesn't read
   it, but quota-adjacent dashboards step up on upgrade day. Quota admission is unchanged, so no
@@ -218,15 +265,59 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.7.4 (**49 resources + 4 data sources**).
+Not bugs; scope decisions. Current as of v1.8.0 (**51 resources + 4 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
 sub-config endpoints have `repository_*` resources (`repository_security`,
 `repository_cache_ttl`, `repository_npm_scope_policy`, `repository_routing_rules`,
-`repository_pypi_track`, `repository_upstream_auth`, `repository_release_target`), and the
-v1.7.1 pass closed the last two API-only gaps.
+`repository_pypi_track`, `repository_upstream_auth`, `repository_egress_proxy`,
+`repository_release_target`), and the v1.7.1 pass closed the last two API-only gaps.
+
+The v1.8.0 pass measured this rather than asserting it. Every one of the **455 documented
+endpoints on upstream v1.8.0** was put in a bucket, with the requirement that nothing be left
+over:
+
+| | | | |
+|---|---|---|---|
+| Modelled | 157 | Artifact / build / SBOM data | 117 |
+| Package wire protocols | *(mounted outside `/api/v1`)* | Monitoring & read-only | 59 |
+| Imperative actions | 49 | Auth, session & TOTP flows | 21 |
+| Collection `GET`s (provider addresses by id) | 19 | Scope decisions, listed below | 19 |
+| Incremental variant of a whole-set write | 11 | Health probes | 3 |
+| **Unclassified** | **0** | | |
+
+The same was done for **configuration**: all 143 `Deserialize` request structs on upstream
+v1.8.0 were field-diffed against every `json:` tag in `internal/client/`. 53 structs carry a
+field the client never sends, and each one falls in a bucket above (imperative bodies, P2P
+transfer, build/upload payloads, whole-set label writes) or in the two lists below. Nothing
+settable is unaccounted for.
+
+One false positive to know about when redoing this: the extractor reads Rust field names, so
+`InstallFromGitRequest.git_ref` looks missing when the provider does send it — the field is
+`#[serde(rename = "ref")]`. Check the serde attribute before believing a hit.
+
+**Closed in v1.8.0:** `repository_egress_proxy` and `totp_policy`, the only two declarative
+endpoints 1.8.0 added.
 
 **Closed in v1.7.4:** `migration_job.repo_mappings`, the only settable field 1.7.3 added.
+
+**Known broken, and it is the backend's fault: `peer_network_profile`.** The resource sends
+`PUT /peers/{id}/network-profile`, which is the path the handler's own doc comment, its
+`#[utoipa::path]` and its unit test all say it lives at. The production router disagrees:
+`routes.rs` does `.merge(handlers::peer::network_profile_router())` into the `/peers` nest,
+and that router is `Router::new().route("/network-profile", put(update_network_profile))` with
+no `/:id` prefix, so the only mounted path is `PUT /api/v1/peers/network-profile` — served by
+a handler that extracts `Path<Uuid>` and has nothing to extract. The provider's call 404s and
+the mounted path cannot work either. Unchanged since at least v1.7.4, and invisible to the
+acceptance suite because `peer` needs a reachable peer to exercise. Fix belongs upstream
+(nest the router under `/:id`, as the test does); until then the resource is inert.
+
+**Deliberately unmodelled settable fields.** `RegisterPeerRequest.sync_filter` is write-only
+in practice: `PeerInstanceResponse` doesn't return it and peers have no `PATCH`, so it could
+only ever be set at create and never refreshed or drift-checked. `CreateFormatHandler`'s
+`extensions`/`plugin_id`/`priority` belong to *creating* a custom format handler via
+`POST /formats`; `format_handler` deliberately only enables and disables the handlers the
+backend seeds.
 
 **Closed in v1.7.1:** `age_gate.mode`; `peer_instance_label` (peer key/value labels, which
 `sync_policy` match rules consume); `user_api_token` (admin minting a token for another
@@ -258,11 +349,24 @@ build-scoped records that CI produces rather than Terraform (`/builds`, `/sbom`,
 SMTP (env-configured; the UI's SMTP tab is display-and-test only, there is no save
 endpoint, as its own source comments note).
 
-**Not a provider gap, worth knowing:** the web UI ships an admin rate-limit page
-(`src/lib/api/rate-limits.ts`: `GET /admin/rate-limits`, `GET/POST/DELETE
-/admin/rate-limits/exemptions`) whose backend endpoints **do not exist** in 1.7.4 —
-rate-limit exemptions are still env-only (`RATE_LIMIT_EXEMPT_*`). Nothing to model until
-the backend side lands (web #270 / backend #680).
+**Cross-checked against the web UI.** Resolving every `@artifact-keeper/sdk` symbol
+`artifact-keeper-web` imports (plus its hand-written `apiFetch` calls) gives 314 endpoints the
+UI actually calls. Every write among them that the provider doesn't model is an imperative
+action (execute, cancel, approve, promote, test, trigger, rotate, revoke, suppress,
+redeliver), artifact/build/SBOM data, or the auth and upload flows. Three things fell out of
+that diff and none is a provider gap:
+
+- The admin rate-limit page (`src/lib/api/rate-limits.ts`: `GET /admin/rate-limits`,
+  `GET/POST/DELETE /admin/rate-limits/exemptions`) still calls backend endpoints that
+  **do not exist**, in 1.8.0 as in 1.7.4 — rate-limit exemptions remain env-only
+  (`RATE_LIMIT_EXEMPT_*`). Nothing to model until the backend side lands (web #270 /
+  backend #680).
+- The UI calls `POST /quality/gates/{id}` and `POST /service-accounts/{id}`; the backend
+  serves `PUT` and `PATCH` on those. The provider uses the verbs that exist.
+- The UI uses the incremental sub-resource endpoints (`POST`/`DELETE
+  /repositories/{key}/members/{member_key}`, the per-label routes) where the provider uses
+  the whole-set `PUT`. Deliberate: a set-valued attribute in Terraform wants one authoritative
+  write, not a diff replayed as N calls.
 
 Don't advertise these as "coming soon" in the README. Document what's implemented,
 and add the resource in the same change that lists it.
@@ -284,7 +388,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.7.4 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.8.0 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh
@@ -308,8 +412,19 @@ docker compose -f docker-compose.test.yml down -v
 without them terraform-plugin-testing registers the provider under the legacy `-`
 namespace on `registry.terraform.io`, which `tofu` rejects.
 
-The acceptance suite is pinned to the 1.7.4 backend image and was last run live against 1.7.4
-(2026-08-14): all 12 `TestAcc` functions pass. It exercises the great majority
+The suite was run live against the 1.8.0 image on 2026-08-20: **14 pass, 0 fail**. Both
+resources 1.8.0 adds are covered. A test whose endpoint arrived in a later release can skip
+itself rather than fail against an older instance, via `testAccSkipIfEndpointMissing` in
+`provider_test.go` (probe with a method a *sibling* route can't answer, see the comment
+there). `totp_policy` only asserts the `disabled` value on purpose: tightening the policy
+demands the calling admin already have TOTP enrolled, which the test admin deliberately
+doesn't.
+
+Running it live is worth the trouble rather than trusting a source read: it is what caught
+the egress-proxy apply failing with "provider produced inconsistent result after apply",
+because the backend normalises `http://host:3128` to `http://host:3128/` on read-back.
+
+The suite exercises the great majority
 of resources. The smoke/prereq tests create the full post-baseline set alongside
 `repository`/`user`/`group`/`permission` and the data sources, including the v1.7.1
 additions: `age_gate` sets `mode = "first_seen"` on an npm remote (exercising the
@@ -324,7 +439,7 @@ recoverable on import; `repo_mappings` therefore sits in that test's
 Only `peer` (and therefore `peer_instance_label`), `sso_*`, `plugin`, and
 actually *running* a migration (start / test-connection) sit outside it; they need external
 systems (a reachable peer, an IdP, an installable WASM plugin git repo, a live source
-registry) to exercise. `plugin` is source-verified against 1.7.4 (every endpoint, field, and
+registry) to exercise. `plugin` is source-verified against 1.8.0 (every endpoint, field, and
 the `active` status string checked against `handlers/plugins.rs`) plus unit-tested, but has
 not had a live end-to-end apply; `peer_instance_label` is source-verified the same way
 against `handlers/peer_instance_labels.rs`.

@@ -1,0 +1,1 @@
+terraform import artifactkeeper_totp_policy.this totp_policy
