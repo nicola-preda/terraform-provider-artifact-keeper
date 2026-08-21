@@ -63,19 +63,39 @@ backend bump with the procedure below.
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.8.0` (AK 1.8.0); consumers pin
-`~> 1.8.0`. A provider-only fix that keeps the same validated AK version is rare; if one
-is needed, bump the patch ahead of AK and note it in the changelog.
+(`internal/provider/provider.go`). This release is `v1.8.2`, validated against AK 1.8.0;
+consumers pin `~> 1.8.2`. The patch digit is the provider's own and may run ahead of AK, as
+it does here; note it in the changelog when it happens.
 
 Cutting a release:
 
 1. Run the drift check below. Set `ValidatedUpstreamVersion` and the compatibility table
    to the AK version you validated against, in the same commit.
-2. Tag `v<that version>` (e.g. `v1.8.0`) and push it. The `release` workflow runs
-   GoReleaser, which builds the per-platform archives, `SHA256SUMS`, the GPG signature,
-   and the registry manifest, and attaches them to a GitHub release.
-3. First release only: upload the GPG public key to the Terraform Registry and add the
+2. **Grep for stale version pins before tagging**: `grep -rn '~> 1\.' README.md examples/`,
+   then `go generate ./...`. `examples/provider/provider.tf` generates `docs/index.md`,
+   which is the **Terraform Registry landing page** — the pin there is what users copy.
+   Missing it is what caused the 1.8.0/1.8.1 mess below.
+3. Tag `v<that version>` and push it. The `release` workflow runs GoReleaser, which builds
+   the per-platform archives, `SHA256SUMS`, the GPG signature, and the registry manifest,
+   and attaches them to a GitHub release.
+4. Verify the chain: workflow green → GitHub release not a draft with all archives +
+   `SHA256SUMS` + `.sig` + manifest → registry `/v1/providers/.../versions` lists it → the
+   registry's recorded shasum equals the one in `SHA256SUMS` → **open the rendered registry
+   page** and read the example. Checking assets and the version list is not enough; the
+   1.8.0 bad pin was visible only on the rendered page.
+5. First release only: upload the GPG public key to the Terraform Registry and add the
    provider there.
+
+**A published version number is permanently burnt. Never delete and re-tag one.** The
+registry binds a version to the checksums it recorded at ingest and keeps that index record
+even after you delete the version and let it re-ingest, so a rebuilt artifact fails with
+`checksum list has unexpected SHA-256 hash`. You cannot rebuild your way back to the
+recorded hash either: the build is not reproducible, because `mod_timestamp` derives from
+the commit and `goreleaser-action` floats on `~> v2` (three builds of one commit gave three
+checksums on 2026-08-20). A broken release is fixed by **rolling forward** to the next
+patch, which is also HashiCorp's own guidance. `1.8.0` and `1.8.1` were lost this way;
+`1.8.2` is the first usable 1.8 release. `~> 1.8.0` resolves to it, so only an exact
+`= 1.8.0` pin stays broken.
 
 ## Resource → backend map
 
