@@ -48,7 +48,7 @@ func (r *projectMembershipResource) Metadata(_ context.Context, req resource.Met
 
 func (r *projectMembershipResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "A membership grant on a project: the `actions` granted to a user or group on every repository assigned to the project. Declare one per principal. Changing the project or principal forces a new grant; `actions` update in place. Admin-only, and `principal_id` must already exist as the given `principal_type`.",
+		MarkdownDescription: "A membership grant on a project: the `actions` granted to a user, group or service account on every repository assigned to the project. Declare one per principal. Changing the project or principal forces a new grant; `actions` update in place. Admin-only, and `principal_id` must already exist as the given `principal_type`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -62,13 +62,13 @@ func (r *projectMembershipResource) Schema(_ context.Context, _ resource.SchemaR
 			},
 			"principal_type": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Principal type the grant is for: `user` or `group`. Changing this forces a new grant.",
-				Validators:          []validator.String{stringvalidator.OneOf("user", "group")},
+				MarkdownDescription: "Principal type the grant is for: `user`, `group` or `service_account`. Changing this forces a new grant. `service_account` needs Artifact Keeper 1.9.1 or later; earlier backends reject it with a 400.",
+				Validators:          []validator.String{stringvalidator.OneOf("user", "group", "service_account")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"principal_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "UUID of the user or group. Must already exist as the given `principal_type`. Changing this forces a new grant.",
+				MarkdownDescription: "UUID of the user, group or service account. Must already exist as the given `principal_type`. Changing this forces a new grant.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"actions": schema.ListAttribute{

@@ -1,11 +1,14 @@
-# Minimal Artifact Keeper 1.8.0 stack for running the provider's acceptance tests.
+# Minimal Artifact Keeper 1.9.1 stack for running the provider's acceptance tests.
 #
 #   docker compose -f docker-compose.test.yml up -d
-#   TF_ACC=1 \
-#     ARTIFACT_KEEPER_ENDPOINT=http://localhost:8080 \
-#     ARTIFACT_KEEPER_USERNAME=admin ARTIFACT_KEEPER_PASSWORD=admin \
-#     TF_ACC_TERRAFORM_PATH="$(command -v tofu)" \
-#     go test ./internal/provider -run TestAcc -v
+#
+# First boot arms the setup gate: the API stays locked until the bootstrap admin's
+# password is rotated, and only POST /users/{id}/password gets through it (the profile
+# endpoint answers SETUP_REQUIRED). Log in as admin/admin, take the admin's id from the
+# JWT `sub` claim, rotate, then mint a token with scopes ["*"] and authenticate with that
+# — token auth skips the login rate limiter the per-step logins would otherwise trip.
+#
+#   TF_ACC=1 ARTIFACT_KEEPER_ENDPOINT=http://localhost:8080 ARTIFACT_KEEPER_TOKEN=<token> TF_ACC_TERRAFORM_PATH="$(command -v tofu)" TF_ACC_PROVIDER_HOST=registry.opentofu.org TF_ACC_PROVIDER_NAMESPACE=hashicorp go test ./internal/provider -run TestAcc -v
 #   docker compose -f docker-compose.test.yml down -v
 #
 # The backend image tag tracks ValidatedUpstreamVersion (internal/provider/provider.go).
@@ -39,7 +42,7 @@ services:
       start_period: 20s
 
   backend:
-    image: ghcr.io/artifact-keeper/artifact-keeper-backend:1.8.0
+    image: ghcr.io/artifact-keeper/artifact-keeper-backend:1.9.1
     depends_on:
       postgres: { condition: service_healthy }
       opensearch: { condition: service_healthy }

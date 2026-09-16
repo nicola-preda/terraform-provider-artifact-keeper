@@ -160,6 +160,14 @@ resource "artifactkeeper_format_handler" "oci" {
   format_key = "oci"
   enabled    = false
 }
+
+# 1.9.1 (#3700) widened the project-member principal domain to service accounts.
+resource "artifactkeeper_project_membership" "ci" {
+  project_id     = artifactkeeper_project.team.id
+  principal_type = "service_account"
+  principal_id   = artifactkeeper_service_account.ci.id
+  actions        = ["read"]
+}
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("artifactkeeper_service_account.ci", "username"),
@@ -170,6 +178,7 @@ resource "artifactkeeper_format_handler" "oci" {
 					resource.TestCheckResourceAttr("artifactkeeper_quality_gate.baseline", "action", "block"),
 					resource.TestCheckResourceAttr("artifactkeeper_security_policy.gate", "max_severity", "high"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_project.team", "id"),
+					resource.TestCheckResourceAttr("artifactkeeper_project_membership.ci", "principal_type", "service_account"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_license_policy.licenses", "id"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_email_subscription.notify", "id"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_ci_oidc_identity_mapping.gl_map", "id"),

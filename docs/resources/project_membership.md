@@ -3,12 +3,12 @@
 page_title: "artifactkeeper_project_membership Resource - artifactkeeper"
 subcategory: ""
 description: |-
-  A membership grant on a project: the actions granted to a user or group on every repository assigned to the project. Declare one per principal. Changing the project or principal forces a new grant; actions update in place. Admin-only, and principal_id must already exist as the given principal_type.
+  A membership grant on a project: the actions granted to a user, group or service account on every repository assigned to the project. Declare one per principal. Changing the project or principal forces a new grant; actions update in place. Admin-only, and principal_id must already exist as the given principal_type.
 ---
 
 # artifactkeeper_project_membership (Resource)
 
-A membership grant on a project: the `actions` granted to a user or group on every repository assigned to the project. Declare one per principal. Changing the project or principal forces a new grant; `actions` update in place. Admin-only, and `principal_id` must already exist as the given `principal_type`.
+A membership grant on a project: the `actions` granted to a user, group or service account on every repository assigned to the project. Declare one per principal. Changing the project or principal forces a new grant; `actions` update in place. Admin-only, and `principal_id` must already exist as the given `principal_type`.
 
 ## Example Usage
 
@@ -36,8 +36,8 @@ resource "artifactkeeper_project_membership" "auditor_ro" {
 ### Required
 
 - `actions` (List of String) Actions granted on every repository in the project (e.g. `["read"]`, `["read", "write"]`). At least one is required.
-- `principal_id` (String) UUID of the user or group. Must already exist as the given `principal_type`. Changing this forces a new grant.
-- `principal_type` (String) Principal type the grant is for: `user` or `group`. Changing this forces a new grant.
+- `principal_id` (String) UUID of the user, group or service account. Must already exist as the given `principal_type`. Changing this forces a new grant.
+- `principal_type` (String) Principal type the grant is for: `user`, `group` or `service_account`. Changing this forces a new grant. `service_account` needs Artifact Keeper 1.9.1 or later; earlier backends reject it with a 400.
 - `project_id` (String) UUID of the project. Changing this forces a new grant.
 
 ### Read-Only

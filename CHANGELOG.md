@@ -2,8 +2,50 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.8.0` = Artifact Keeper 1.8.0);
+the Artifact Keeper release it is validated against (`v1.9.1` = Artifact Keeper 1.9.1);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
+
+## [1.9.1] - 2026-09-14
+
+Validated against Artifact Keeper 1.9.1. 141 commits and 121 backend source files since
+1.8.0, and almost none of it is API shape: the documented route table is **identical** at
+both tags (457 endpoints, nothing added, nothing removed), and the mechanical struct diff
+finds no removal, rename or retype — the eleven fields that look dropped are the same
+fields re-declared with `#[serde(default)]`, a relaxation. 1.9.0 and 1.9.1 are a security
+and correctness line: existence-hiding 404s on the artifact and `/v2` read paths, NUL-byte
+refusals, bounded archive extraction, and generic login-failure text. None of that is
+config surface, so the provider is a drop-in.
+
+### Changed
+
+- `artifactkeeper_project_membership` accepts `principal_type = "service_account"`. The
+  write plane refused it while the read plane had resolved service-account grants on a
+  `project` target since 1.6.0, so an operator managing access by project had no grant
+  channel for a service account at all (#3700). The type/id correspondence check is
+  unchanged, so naming a person's id as a `service_account` is still a `400`. Against a
+  backend older than 1.9.1 the backend rejects the value; the provider no longer does.
+
+### Upgrade notes
+
+- **`artifactkeeper_repository_cache_ttl` reads back `300` where it read `86400`.**
+  `GET /repositories/{key}/cache-ttl` reported a 24-hour default for a repository with no
+  stored override while the proxy actually applied the cache classifier's 5-minute
+  mutable-path default; the endpoint now reports what the proxy applies (#3721). Nothing
+  about caching changed. A repository this resource manages stores a row and is unaffected;
+  the new value shows up when you import or refresh one that never had an override.
+- **A TOTP-free admin still cannot use username/password auth if a policy is set**, and the
+  first-boot setup gate now names the endpoint it wants: rotate through
+  `POST /users/{id}/password`, not `POST /profile/password`, which the gate blocks.
+  `docker-compose.test.yml` documents the sequence.
+
+### Not changed, and deliberately
+
+- OIDC gained an `admin_group` convenience field on create and update (#3420). It is stored
+  as `attribute_mapping.admin_group`, which `artifactkeeper_sso_oidc` already writes
+  authoritatively through `attribute_mapping`, so there is nothing to add and no drift: a
+  map that omits the key clears it, which is what a declarative config should do.
+- `AdminUserResponse` gained `is_service_account` and `GET /users` gained a filter for it
+  (#3634). Read-only discriminator and a query parameter; neither is settable.
 
 ## [1.8.2] - 2026-08-20
 

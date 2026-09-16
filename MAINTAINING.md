@@ -37,9 +37,39 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.8.0** (2026-08-19) |
-| Provider changes needed | additive only (`repository_egress_proxy`, `totp_policy`) |
-| Acceptance suite | run live against the 1.8.0 backend image (2026-08-20); all 14 `TestAcc` functions pass |
+| Validated against | **Artifact Keeper 1.9.1** (2026-09-14) |
+| Provider changes needed | one widened validator (`project_membership.principal_type` accepts `service_account`) |
+| Acceptance suite | run live against the 1.9.1 backend image (2026-09-14); all 14 `TestAcc` functions pass |
+
+141 commits and 121 backend source files since 1.8.0, and essentially none of it is API
+shape. The documented route table is **identical** at both tags — 457 endpoints, nothing
+added, nothing removed — and the struct diff finds no removal, rename or retype. Eleven
+fields look dropped and all eleven are the same field re-declared with `#[serde(default)]`
+(`CreateBuildRequest`'s VCS fields, `HelmIndex`, `IndexEntry`,
+`BuildArtifactInputPayload.module_name`), which is a relaxation. 1.9.0 and 1.9.1 are a
+security and correctness line: existence-hiding 404s on the artifact and `/v2` read paths,
+NUL-byte refusal at one shared boundary, bounded archive extraction, generic login-failure
+text, and a credential-exchange expiry cap on the Conan and OCI token endpoints. None of
+that is declarative configuration.
+
+Exactly one settable thing widened: `POST /projects/{id}/members` accepts
+`principal_type = "service_account"` (#3700), which `project_membership` validated away at
+plan time. Two other additions need nothing:
+
+- OIDC `admin_group` on create and update (#3420) is persisted as
+  `attribute_mapping.admin_group`, and `sso_oidc` already owns `attribute_mapping`
+  authoritatively. The backend applies `admin_group` *after* the merge/replace and the
+  provider never sends it, so the map stays the single writer.
+- `AdminUserResponse.is_service_account` and the matching `GET /users` filter (#3634) are a
+  read-only discriminator and a query parameter.
+
+Neither does the existence-hiding 404 work reach the provider: `extract_repo_key` in
+`api/middleware/auth.rs` parses package wire-protocol paths (`/npm/…`, `/pypi/…`, `/ext/…`,
+`/api/cargo/…`), not `/api/v1/repositories/{key}`, and the exchange cap applies to
+`/v2/token` and the Conan authenticate exchange, not to `/auth/login` or
+`POST /profile/access-tokens`.
+
+### The 1.8.0 pass, for reference
 
 A much bigger release than 1.7.4 (40 commits, 109 backend source files, ~36k inserted lines)
 that is still a drop-in. The mechanical struct diff over `api/handlers/`, `services/` and
@@ -63,9 +93,9 @@ backend bump with the procedure below.
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.8.2`, validated against AK 1.8.0;
-consumers pin `~> 1.8.2`. The patch digit is the provider's own and may run ahead of AK, as
-it does here; note it in the changelog when it happens.
+(`internal/provider/provider.go`). This release is `v1.9.1`, validated against AK 1.9.1;
+consumers pin `~> 1.9.1`. The patch digit is the provider's own and may run ahead of AK, as
+it did at `v1.8.2`; note it in the changelog when it happens.
 
 Cutting a release:
 
@@ -139,8 +169,8 @@ that handler on a bump.
 
 ## How to re-check drift on a version bump
 
-When the backend moves to a new tag (say `v1.9.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.8.0`).
+When the backend moves to a new tag (say `v1.10.0`), verify the provider before
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.9.1`).
 
 Fastest first pass, and the one that actually caught both the 1.7.1 and 1.7.4 deltas: diff every
 serializable struct between the two tags, rather than reading handlers one by one. Extract
@@ -169,6 +199,16 @@ carry `context_path`, so the path is complete) plus the `.route(...)` registrati
 carry no annotation. Worth redoing that way on a big jump: it is what surfaced
 `/repositories/{key}/egress-proxy` and `/admin/settings/totp-policy`, neither of which shows
 up in a `routes.rs` diff.
+
+Both extractions are worth scripting rather than eyeballing; 1.9.1 took about a minute that
+way over 141 commits. `git archive <tag> backend/src | tar -x -C <dir>` both trees, then run
+two throwaway Python passes over them and `comm` the sorted output: one regexing
+`pub struct X { … }` / `pub enum X { … }` into `name :: field: type` lines (fold the
+`#[serde(rename = "…")]` target and a `[default]` marker into the line, skip `serde(skip)`),
+one regexing `#[utoipa::path(...)]` into `METHOD context_path+path`. **Read the removals as
+pairs**: a field that shows up on both sides of the diff, once bare and once `[default]`,
+gained `#[serde(default)]` and is a relaxation, not a removal. That accounted for all eleven
+apparent removals in 1.9.1.
 
 Also worth doing on a big jump, and what the 1.8.0 pass used to confirm coverage rather than
 just compatibility: extract every JSON field name from `internal/client/*.go` and every field
@@ -278,6 +318,20 @@ For a big jump, fan the per-row diffs out across parallel workers.
   `GLOBAL_REQUEST_TIMEOUT_SECS` used to abort slow uploads mid-body, turning a duration cap
   into a size cap. Upload/download routes are now exempt. The provider moves no artifact
   bytes, so this is upgrade-note context, not a provider concern.
+- **`repository_cache_ttl` reads back 300 where it read 86400 (1.9.1, #3721).** With no stored
+  override the endpoint reported a 24-hour default while the proxy applied the cache
+  classifier's 5-minute mutable-path default; it now reports what the proxy applies. Caching
+  behavior is unchanged. A repository this resource manages has a stored row and is
+  unaffected; the new value appears when you import or refresh one that never had an override.
+- **The first-boot setup gate blocks `POST /profile/password` (1.9.1, #3740).** Rotating the
+  bootstrap admin's password is the thing that unlocks the API, and only
+  `POST /users/{id}/password` is reachable while the gate is armed. Relevant to the
+  acceptance stack, not to a running instance; `docker-compose.test.yml` carries the sequence.
+- **Project members can be service accounts (1.9.1, #3700).** The read plane had resolved
+  `service_account` grants on a `project` target since 1.6.0 while the write plane refused
+  them, so managing access by project left a service account with no grant channel and every
+  push denied. `project_membership` no longer validates the value away. The type/id
+  correspondence check is unchanged, so a mistyped principal is still a 400.
 - **Storage totals change basis (1.7.3, #3134, #3249).** `total_storage_bytes` now sums the usage
   ledger, folding in OCI blob and proxy-cached bytes. Display-only, and the provider doesn't read
   it, but quota-adjacent dashboards step up on upgrade day. Quota admission is unchanged, so no
@@ -285,7 +339,8 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.8.0 (**51 resources + 4 data sources**).
+Not bugs; scope decisions. Current as of v1.9.1 (**51 resources + 4 data sources**); the
+1.9.1 pass added no endpoint to either side, since upstream's route table did not move.
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
 sub-config endpoints have `repository_*` resources (`repository_security`,
@@ -293,7 +348,31 @@ sub-config endpoints have `repository_*` resources (`repository_security`,
 `repository_pypi_track`, `repository_upstream_auth`, `repository_egress_proxy`,
 `repository_release_target`), and the v1.7.1 pass closed the last two API-only gaps.
 
-The v1.8.0 pass measured this rather than asserting it. Every one of the **455 documented
+The 1.9.1 pass re-measured all three axes from scratch rather than inheriting the 1.8.0
+result, and all three come back clean:
+
+- **Endpoints.** 457 documented routes on upstream v1.9.1 — 454 under `/api/v1`, 3 outside
+  — against the 164 calls extracted from `internal/client/*.go`. 296 `/api/v1` endpoints go
+  uncalled and 145 of those are writes; every one is an imperative action, an auth/session/
+  TOTP flow, artifact/build/SBOM/upload data, a monitoring read, a collection `GET` the
+  provider addresses by id, the incremental variant of a whole-set write, or an
+  enable/disable toggle the provider performs through the object's own `enabled` field
+  (`PATCH /admin/sso/*/toggle`, `POST /webhooks/{id}/enable`, `POST /formats/{key}/enable`,
+  `POST /sync-policies/{id}/toggle`). Nothing declarative is left over.
+- **The web UI.** Resolving the 245 `@artifact-keeper/sdk` symbols the app imports against
+  the SDK's generated `sdk.gen.ts`, plus its 53 hand-written `apiFetch` paths, gives every
+  endpoint the UI can reach. 71 of its writes are ones the provider doesn't call, and they
+  fall in the same buckets — nothing the UI can *configure* is missing from Terraform. The
+  one thing that stands out is unchanged since 1.7.4: the admin rate-limit page
+  (`GET /admin/rate-limits`, `GET/POST/DELETE /admin/rate-limits/exemptions`) calls
+  endpoints that **do not exist** in the backend at v1.9.1 either. Exemptions remain
+  env-only (`RATE_LIMIT_EXEMPT_*`).
+- **Fields.** Of the 125 structs a `#[utoipa::path(request_body = …)]` names at v1.9.1, 44
+  carry at least one field no `json:` tag in `internal/client/` mentions. Each is an
+  imperative body, an upload/transfer/build payload, a TOTP or password exchange, a
+  whole-set label write, or one of the single-owner duplicates below.
+
+The v1.8.0 pass measured the same thing a different way. Every one of the **455 documented
 endpoints on upstream v1.8.0** was put in a bucket, with the requirement that nothing be left
 over:
 
@@ -315,6 +394,10 @@ settable is unaccounted for.
 One false positive to know about when redoing this: the extractor reads Rust field names, so
 `InstallFromGitRequest.git_ref` looks missing when the provider does send it — the field is
 `#[serde(rename = "ref")]`. Check the serde attribute before believing a hit.
+
+**Closed in v1.9.1:** nothing was open. 1.9.1 adds no endpoint and one settable value,
+`project_membership.principal_type = "service_account"`, which was a client-side validator
+too narrow for the backend rather than an unmodelled field.
 
 **Closed in v1.8.0:** `repository_egress_proxy` and `totp_policy`, the only two declarative
 endpoints 1.8.0 added.
@@ -359,6 +442,10 @@ and a dedicated resource; the sub-resource owns them, so they are deliberately n
 `repository_npm_scope_policy`), `release_repository_key` (owned by
 `repository_release_target`), and `age_gate_mode` (owned by `age_gate`).
 `npm_allowed_name_patterns`, which no sub-resource covers, *is* on the repository object.
+`CreateRepositoryRequest.member_repos` is the same shape: a create-time shortcut for a
+virtual repository's members, where `repository.members` writes the authoritative whole set
+through `PUT /repositories/{key}/members` instead. Sending both would give create and
+update two different owners for one list.
 
 **Correctly excluded (not IaC):** imperative actions (approval, quarantine, plugin
 install, promotion/migration runs, cache invalidation, per-repo and global storage GC,
@@ -378,7 +465,7 @@ that diff and none is a provider gap:
 
 - The admin rate-limit page (`src/lib/api/rate-limits.ts`: `GET /admin/rate-limits`,
   `GET/POST/DELETE /admin/rate-limits/exemptions`) still calls backend endpoints that
-  **do not exist**, in 1.8.0 as in 1.7.4 — rate-limit exemptions remain env-only
+  **do not exist**, in 1.9.1 as in 1.8.0 and 1.7.4 — rate-limit exemptions remain env-only
   (`RATE_LIMIT_EXEMPT_*`). Nothing to model until the backend side lands (web #270 /
   backend #680).
 - The UI calls `POST /quality/gates/{id}` and `POST /service-accounts/{id}`; the backend
@@ -408,14 +495,17 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.8.0 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.9.1 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh
 docker compose -f docker-compose.test.yml up -d
 # First boot: admin is admin/admin and must rotate the password before the API
-# unlocks. Rotate, then mint an API token and use it; token auth avoids the login
-# rate limiter (10 / 15 min per user+IP), which the many per-step logins otherwise trip.
+# unlocks, and only POST /users/{id}/password gets through the setup gate — the
+# profile endpoint answers SETUP_REQUIRED. Take the admin's id from the `sub` claim
+# of the admin/admin login, rotate, then mint an API token with scopes ["*"] and use
+# it; token auth avoids the login rate limiter (10 / 15 min per user+IP), which the
+# many per-step logins otherwise trip.
 
 TF_ACC=1 \
   ARTIFACT_KEEPER_ENDPOINT=http://localhost:8080 \
@@ -432,8 +522,10 @@ docker compose -f docker-compose.test.yml down -v
 without them terraform-plugin-testing registers the provider under the legacy `-`
 namespace on `registry.terraform.io`, which `tofu` rejects.
 
-The suite was run live against the 1.8.0 image on 2026-08-20: **14 pass, 0 fail**. Both
-resources 1.8.0 adds are covered. A test whose endpoint arrived in a later release can skip
+The suite was run live against the 1.9.1 image on 2026-09-14: **14 pass, 0 fail**. The one
+thing 1.9.1 changes is covered: the smoke test grants a project membership to
+`artifactkeeper_service_account.ci`, which 1.8.0 would have refused. A test whose endpoint
+arrived in a later release can skip
 itself rather than fail against an older instance, via `testAccSkipIfEndpointMissing` in
 `provider_test.go` (probe with a method a *sibling* route can't answer, see the comment
 there). `totp_policy` only asserts the `disabled` value on purpose: tightening the policy
