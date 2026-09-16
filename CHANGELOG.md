@@ -42,7 +42,7 @@ config surface, so the provider is a drop-in.
 
 - Bumped three transitively-required modules that `govulncheck` reported as reachable from
   provider code: `google.golang.org/grpc` 1.79.3 → 1.83.2, `golang.org/x/net` 0.52.0 →
-  0.56.0, `golang.org/x/text` 0.36.0 → 0.41.0. Five advisories, all on the plugin's own gRPC
+  0.58.0, `golang.org/x/text` 0.36.0 → 0.41.0. Five advisories, all on the plugin's own gRPC
   server (`providerserver.Serve`) and the HTTP client's transport: GO-2026-6443 (the
   missing-authority server panic, CVE-2026-84445, which needs 1.83.2 and not the 1.83.1 the
   advisory's lower branch names), GO-2026-6348, GO-2026-6061, GO-2026-5970, GO-2026-5026.
