@@ -121,8 +121,10 @@ registry binds a version to the checksums it recorded at ingest and keeps that i
 even after you delete the version and let it re-ingest, so a rebuilt artifact fails with
 `checksum list has unexpected SHA-256 hash`. You cannot rebuild your way back to the
 recorded hash either: the build is not reproducible, because `mod_timestamp` derives from
-the commit and `goreleaser-action` floats on `~> v2` (three builds of one commit gave three
-checksums on 2026-08-20). A broken release is fixed by **rolling forward** to the next
+the commit and, in August 2026, `goreleaser-action` floated on `~> v2` — three builds of one
+commit gave three checksums on 2026-08-20. Every action is digest-pinned now, so a rebuild
+is closer to reproducible than it was, but do not bet a release on it. A broken release is
+fixed by **rolling forward** to the next
 patch, which is also HashiCorp's own guidance. `1.8.0` and `1.8.1` were lost this way;
 `1.8.2` is the first usable 1.8 release. `~> 1.8.0` resolves to it, so only an exact
 `= 1.8.0` pin stays broken.
