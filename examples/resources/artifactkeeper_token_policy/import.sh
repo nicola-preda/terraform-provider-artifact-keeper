@@ -1,0 +1,1 @@
+terraform import artifactkeeper_token_policy.this token_policy

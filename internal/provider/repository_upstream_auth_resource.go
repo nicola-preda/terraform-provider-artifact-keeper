@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
 )
@@ -35,8 +38,19 @@ type repositoryUpstreamAuthResourceModel struct {
 	AuthType           types.String `tfsdk:"auth_type"`
 	Username           types.String `tfsdk:"username"`
 	Password           types.String `tfsdk:"password"`
+	Aws                types.Object `tfsdk:"aws"`
 	Configured         types.Bool   `tfsdk:"configured"`
 	ConfiguredAuthType types.String `tfsdk:"configured_auth_type"`
+}
+
+// awsUpstreamAuthModel maps the nested `aws` block. Mirrors
+// client.AwsUpstreamAuth field-for-field.
+type awsUpstreamAuthModel struct {
+	Region          types.String `tfsdk:"region"`
+	RegistryID      types.String `tfsdk:"registry_id"`
+	Domain          types.String `tfsdk:"domain"`
+	DomainOwner     types.String `tfsdk:"domain_owner"`
+	DurationSeconds types.Int64  `tfsdk:"duration_seconds"`
 }
 
 func (r *repositoryUpstreamAuthResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -59,8 +73,8 @@ func (r *repositoryUpstreamAuthResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"auth_type": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Authentication type: `basic` (username + password), `bearer` (token in `password`), or `none` (removes the auth).",
-				Validators:          []validator.String{stringvalidator.OneOf("basic", "bearer", "none")},
+				MarkdownDescription: "Authentication type: `basic` (username + password), `bearer` (token in `password`), `aws_ecr` or `aws_codeartifact` (credentials minted from the backend's own AWS identity, configured in the `aws` block), or `none` (removes the auth).",
+				Validators:          []validator.String{stringvalidator.OneOf("basic", "bearer", "aws_ecr", "aws_codeartifact", "none")},
 			},
 			"username": schema.StringAttribute{
 				Optional:            true,
@@ -71,6 +85,36 @@ func (r *repositoryUpstreamAuthResource) Schema(_ context.Context, _ resource.Sc
 				Optional:            true,
 				Sensitive:           true,
 				MarkdownDescription: "Password for `basic` auth or the token for `bearer` auth. Not returned by the API.",
+			},
+			"aws": schema.SingleNestedAttribute{
+				Optional:            true,
+				MarkdownDescription: "Provider settings for the dynamic AWS auth types, required for `aws_ecr` and `aws_codeartifact` and ignored otherwise. Carries no secret: the AWS identity comes from the backend process's own credential chain (IRSA, EKS Pod Identity, instance profile or static `AWS_*` variables), so there is nothing here to read back and the block is re-sent on every apply like the credentials are.",
+				Attributes: map[string]schema.Attribute{
+					"region": schema.StringAttribute{
+						Required:            true,
+						MarkdownDescription: "AWS region of the registry or domain, e.g. `us-east-1`.",
+					},
+					"registry_id": schema.StringAttribute{
+						Optional:            true,
+						MarkdownDescription: "ECR only: registry (account) id, which pins the upstream host.",
+					},
+					"domain": schema.StringAttribute{
+						Optional:            true,
+						MarkdownDescription: "CodeArtifact only, and required for it: the domain name.",
+					},
+					"domain_owner": schema.StringAttribute{
+						Optional:            true,
+						MarkdownDescription: "CodeArtifact only: account id owning the domain. Defaults to the caller's account.",
+					},
+					"duration_seconds": schema.Int64Attribute{
+						Optional:            true,
+						MarkdownDescription: "CodeArtifact only: requested token lifetime in seconds, either `0` or between `900` and `43200`. Defaults to AWS's own 12 hours.",
+						Validators: []validator.Int64{int64validator.Any(
+							int64validator.OneOf(0),
+							int64validator.Between(900, 43200),
+						)},
+					},
+				},
 			},
 			"configured": schema.BoolAttribute{
 				Computed:            true,
@@ -96,7 +140,12 @@ func (r *repositoryUpstreamAuthResource) Create(ctx context.Context, req resourc
 	}
 
 	repoKey := plan.RepositoryKey.ValueString()
-	if err := r.client.SetUpstreamAuth(ctx, repoKey, upstreamAuthRequestFromModel(plan)); err != nil {
+	authReq, diags := upstreamAuthRequestFromModel(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err := r.client.SetUpstreamAuth(ctx, repoKey, authReq); err != nil {
 		resp.Diagnostics.AddError("Error setting repository upstream auth", err.Error())
 		return
 	}
@@ -141,7 +190,12 @@ func (r *repositoryUpstreamAuthResource) Update(ctx context.Context, req resourc
 	}
 
 	repoKey := plan.RepositoryKey.ValueString()
-	if err := r.client.SetUpstreamAuth(ctx, repoKey, upstreamAuthRequestFromModel(plan)); err != nil {
+	authReq, diags := upstreamAuthRequestFromModel(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err := r.client.SetUpstreamAuth(ctx, repoKey, authReq); err != nil {
 		resp.Diagnostics.AddError("Error updating repository upstream auth", err.Error())
 		return
 	}
@@ -186,10 +240,29 @@ func (r *repositoryUpstreamAuthResource) ImportState(ctx context.Context, req re
 	resource.ImportStatePassthroughID(ctx, path.Root("repository_key"), req, resp)
 }
 
-func upstreamAuthRequestFromModel(m repositoryUpstreamAuthResourceModel) client.UpstreamAuthRequest {
-	return client.UpstreamAuthRequest{
+func upstreamAuthRequestFromModel(ctx context.Context, m repositoryUpstreamAuthResourceModel) (client.UpstreamAuthRequest, diag.Diagnostics) {
+	req := client.UpstreamAuthRequest{
 		AuthType: m.AuthType.ValueString(),
 		Username: optionalString(m.Username),
 		Password: optionalString(m.Password),
 	}
+	var diags diag.Diagnostics
+	if m.Aws.IsNull() || m.Aws.IsUnknown() {
+		return req, diags
+	}
+	var aws awsUpstreamAuthModel
+	diags.Append(m.Aws.As(ctx, &aws, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return req, diags
+	}
+	req.Aws = &client.AwsUpstreamAuth{
+		Region:      aws.Region.ValueString(),
+		RegistryID:  optionalString(aws.RegistryID),
+		Domain:      optionalString(aws.Domain),
+		DomainOwner: optionalString(aws.DomainOwner),
+	}
+	if !aws.DurationSeconds.IsNull() && !aws.DurationSeconds.IsUnknown() {
+		req.Aws.DurationSeconds = aws.DurationSeconds.ValueInt64Pointer()
+	}
+	return req, diags
 }

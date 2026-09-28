@@ -42,6 +42,7 @@ resource "artifactkeeper_sso_saml" "okta" {
 - `require_signed_assertions` (Boolean) Require signed assertions. Defaults to `true`.
 - `sign_requests` (Boolean) Sign AuthnRequests. Defaults to `false`.
 - `slo_url` (String) IdP single-logout URL.
+- `slug` (String) URL-safe alias the public SAML login and ACS routes accept in place of `id`, so a deployment rebuilt from scratch keeps the ACS URL the IdP is registered with. Must match `^[a-z0-9][a-z0-9_-]*$`, be at most 64 characters, not look like a UUID, and be unique across SAML configurations. **The backend cannot clear a slug, only replace it**, so removing this from the configuration keeps the stored value rather than unsetting it.
 - `sp_entity_id` (String) Service Provider entity ID. Defaults to `artifact-keeper`.
 - `use_absolute_acs_url` (Boolean) Advertise an absolute AssertionConsumerService URL in SP metadata/AuthnRequests (needed behind a reverse proxy that rewrites the host). Defaults to `false`.
 

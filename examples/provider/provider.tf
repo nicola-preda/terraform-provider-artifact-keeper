@@ -4,7 +4,7 @@ terraform {
     # (artifactkeeper_*). The source type is "artifact-keeper".
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.9.1"
+      version = "~> 1.10.1"
     }
   }
 }

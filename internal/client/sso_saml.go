@@ -8,8 +8,11 @@ import (
 
 // SamlConfig mirrors SamlConfigResponse. certificate is never returned.
 type SamlConfig struct {
-	ID                      string            `json:"id"`
-	Name                    string            `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Slug is the URL-safe alias the public SAML login and ACS routes accept in
+	// place of the id (1.10.0, #2583). Null for a configuration that has none.
+	Slug                    *string           `json:"slug"`
 	EntityID                string            `json:"entity_id"`
 	SsoURL                  string            `json:"sso_url"`
 	SloURL                  *string           `json:"slo_url"`
@@ -29,7 +32,11 @@ type SamlConfig struct {
 
 // SamlConfigRequest is used for create (POST) and update (PUT).
 type SamlConfigRequest struct {
-	Name                    *string           `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
+	// Slug cannot be cleared through an update, only replaced: omitting it
+	// preserves whatever is stored, so an ACS URL an IdP already knows cannot
+	// be dropped by an update that forgot to mention it.
+	Slug                    *string           `json:"slug,omitempty"`
 	EntityID                *string           `json:"entity_id,omitempty"`
 	SsoURL                  *string           `json:"sso_url,omitempty"`
 	SloURL                  *string           `json:"slo_url,omitempty"`

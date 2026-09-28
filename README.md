@@ -7,12 +7,12 @@ can change in the UI, is a Terraform resource.
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.9.1** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.10.1** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
 
 ## What you can manage
 
-51 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
+52 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
 the admin UI; [`docs/`](docs/) has the full schema for every resource.
 
 | What you want to do | Resources |
@@ -25,7 +25,7 @@ the admin UI; [`docs/`](docs/) has the full schema for every resource.
 | Sign metadata and artifacts, and manage the signing keys | `signing_key`, `repository_signing_config` |
 | Onboard teams: projects, groups, users, per-repository permissions | `project`, `project_membership`, `group`, `group_membership`, `user`, `user_role_assignment`, `permission` |
 | Issue credentials for CI: service accounts, scoped tokens, per-repo tokens, keyless OIDC from your CI provider | `service_account`, `service_account_token`, `api_token`, `user_api_token`, `repo_token`, `ci_oidc_provider`, `ci_oidc_identity_mapping` |
-| Wire up SSO against your IdP, and require 2FA of local accounts | `sso_oidc`, `sso_saml`, `sso_ldap`, `totp_policy` |
+| Wire up SSO against your IdP, require 2FA of local accounts, and bound how long a minted API token lives | `sso_oidc`, `sso_saml`, `sso_ldap`, `totp_policy`, `token_policy` |
 | Replicate between instances and target peers by label | `peer`, `peer_repository_subscription`, `peer_instance_label`, `peer_network_profile`, `sync_policy`, `remote_instance` |
 | Import from a legacy registry (Nexus, Artifactory) | `migration_source`, `migration_job` |
 | Notify on events | `webhook`, `email_subscription` |
@@ -46,7 +46,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.9.1"
+      version = "~> 1.10.1"
     }
   }
 }
@@ -102,8 +102,8 @@ provider "artifactkeeper" {
 
 The provider version tracks the Artifact Keeper version it's validated against, and every
 release's acceptance suite is run against that exact backend image. The patch digit is the
-provider's own, so it can run ahead: `v1.9.1` is the current release and targets Artifact
-Keeper 1.9.1. Pin with `~> 1.9.1`.
+provider's own, so it can run ahead: `v1.10.1` is the current release and targets Artifact
+Keeper 1.10.1. Pin with `~> 1.10.1`.
 
 `1.8.0` and `1.8.1` were published and withdrawn; neither installs. See the changelog.
 

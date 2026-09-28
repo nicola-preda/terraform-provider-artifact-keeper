@@ -34,11 +34,12 @@ variable "upstream_password" {
 
 ### Required
 
-- `auth_type` (String) Authentication type: `basic` (username + password), `bearer` (token in `password`), or `none` (removes the auth).
+- `auth_type` (String) Authentication type: `basic` (username + password), `bearer` (token in `password`), `aws_ecr` or `aws_codeartifact` (credentials minted from the backend's own AWS identity, configured in the `aws` block), or `none` (removes the auth).
 - `repository_key` (String) Key of the remote repository whose upstream credentials are managed. Changing this forces a new resource.
 
 ### Optional
 
+- `aws` (Attributes) Provider settings for the dynamic AWS auth types, required for `aws_ecr` and `aws_codeartifact` and ignored otherwise. Carries no secret: the AWS identity comes from the backend process's own credential chain (IRSA, EKS Pod Identity, instance profile or static `AWS_*` variables), so there is nothing here to read back and the block is re-sent on every apply like the credentials are. (see [below for nested schema](#nestedatt--aws))
 - `password` (String, Sensitive) Password for `basic` auth or the token for `bearer` auth. Not returned by the API.
 - `username` (String, Sensitive) Username for `basic` auth. Not returned by the API.
 
@@ -47,6 +48,20 @@ variable "upstream_password" {
 - `configured` (Boolean) Whether upstream credentials are currently configured on the repository, read back from the repository object. Flips to `false` if the auth is cleared out of band.
 - `configured_auth_type` (String) The upstream auth type the server currently reports for the repository (`basic` or `bearer`), or null when none is configured.
 - `id` (String) Resource identifier. Equal to `repository_key`.
+
+<a id="nestedatt--aws"></a>
+### Nested Schema for `aws`
+
+Required:
+
+- `region` (String) AWS region of the registry or domain, e.g. `us-east-1`.
+
+Optional:
+
+- `domain` (String) CodeArtifact only, and required for it: the domain name.
+- `domain_owner` (String) CodeArtifact only: account id owning the domain. Defaults to the caller's account.
+- `duration_seconds` (Number) CodeArtifact only: requested token lifetime in seconds, either `0` or between `900` and `43200`. Defaults to AWS's own 12 hours.
+- `registry_id` (String) ECR only: registry (account) id, which pins the upstream host.
 
 ## Import
 

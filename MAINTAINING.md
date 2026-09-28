@@ -37,9 +37,39 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.9.1** (2026-09-14) |
-| Provider changes needed | one widened validator (`project_membership.principal_type` accepts `service_account`) |
-| Acceptance suite | run live against the 1.9.1 backend image (2026-09-14); all 14 `TestAcc` functions pass |
+| Validated against | **Artifact Keeper 1.10.1** (2026-09-28) |
+| Provider changes needed | one new resource (`token_policy`), one widened enum plus a nested block (`repository_upstream_auth` AWS auth), one new field (`sso_saml.slug`) |
+| Acceptance suite | run live against the 1.10.1 backend image (2026-09-28) |
+
+1.10 is the first release since 1.8.0 whose route table moves: **457 documented endpoints at
+1.9.1, 473 at 1.10.1**, sixteen added and none removed, renamed or retyped. Sixteen fields
+also look dropped and none is: two are relaxations (`AuthConfig.admin_break_glass_enabled`
+`bool` to `Option<bool>`, `CiTokenRequest.provider_id` gaining `#[serde(default)]`), twelve
+belong to `PluginService`/`ArtifactService` or to the WASM plugin payloads
+(`WebhookPayload`, `ValidatorResult`) that no client file reads, one is a doc-comment line
+the extractor mis-reads as a field, and the last is a real tightening on an endpoint the
+provider never calls: `StorageGcRequest.dry_run` lost its default, so
+`POST /admin/storage/gc` now requires it.
+
+Three settable things arrived, and all three are now modelled:
+
+- `GET/PUT /admin/settings/token-policy` (#3460), the API token expiration policy, is the
+  only declarative endpoint in the sixteen, and is now `token_policy`. Note the pin
+  semantics: when `API_TOKEN_EXPIRATION_REQUIRED` is set the `PUT` **409s** rather than
+  silently losing to the environment, which is how this differs from the env-first
+  `system_settings` fields (see [env-locked settings](#caveats--behavioral-notes-not-schema-breaks)).
+- `UpstreamAuthRequest.aws` plus two new `auth_type` values, `aws_ecr` and
+  `aws_codeartifact` (#1559). The provider's `OneOf` validator rejected those two at plan
+  time, so this was a gap in both halves: the enum and the block.
+- `CreateSamlConfigRequest.slug` / `UpdateSamlConfigRequest.slug` (#2583, migration 218),
+  the URL-safe alias the public SAML routes accept in place of the config id. It cannot be
+  cleared through the update endpoint, only replaced, so the attribute is
+  `Optional + Computed`: dropping it from a config keeps the stored value.
+
+The other fourteen routes are the image-build engine (eight), two maintenance backfills,
+the external-findings ingest and three PyPI JSON endpoints. One of them reads declarative
+and is not: `GET /repositories/{key}/image-builds/settings` has no write path at all,
+because `ImageBuildSettings::from_env()` owns the whole block.
 
 141 commits and 121 backend source files since 1.8.0, and essentially none of it is API
 shape. The documented route table is **identical** at both tags — 457 endpoints, nothing
@@ -150,6 +180,7 @@ Rust names (provider Go names differ where noted).
 | `repository_upstream_auth` | `PUT /repositories/{key}/upstream-auth` (write-only, no GET) | `handlers/repositories.rs` | `UpstreamAuthRequest` |
 | `repository_egress_proxy` | `GET/PUT /repositories/{key}/egress-proxy` (remote repos only; `proxy_url` reads back redacted) | `handlers/repositories.rs`, `services/egress_proxy.rs` | `EgressProxyRequest`, `EgressProxyResponse`, `EgressProxyMode` |
 | `totp_policy` | `GET/PUT /admin/settings/totp-policy` | `handlers/admin.rs`, `services/totp_policy.rs` | `TotpPolicyResponse`, `UpdateTotpPolicyRequest`, `TotpPolicy` |
+| `token_policy` | `GET/PUT /admin/settings/token-policy` | `handlers/admin.rs`, `services/token_expiry_policy.rs` | `TokenPolicyResponse`, `UpdateTokenPolicyRequest`, `ApiTokenExpiryPolicy` |
 | `repository_release_target` | `GET/PUT /promotion/repositories/{key}/release-target` | `handlers/promotion.rs` | `ReleaseTargetResponse`, `SetReleaseTargetRequest` |
 | `sso_oidc` | `POST /admin/sso/oidc`, `GET/PUT/DELETE …/{id}` | `handlers/sso_admin.rs` (routes), `services/auth_config_service.rs` (structs) | `OidcConfigResponse`, `Create/UpdateOidcConfigRequest` |
 | `sso_ldap` | `POST /admin/sso/ldap`, `GET/PUT/DELETE …/{id}` | same as OIDC | `LdapConfigResponse`, `Create/UpdateLdapConfigRequest` |
@@ -171,8 +202,8 @@ that handler on a bump.
 
 ## How to re-check drift on a version bump
 
-When the backend moves to a new tag (say `v1.10.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.9.1`).
+When the backend moves to a new tag (say `v1.11.0`), verify the provider before
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.10.1`).
 
 Fastest first pass, and the one that actually caught both the 1.7.1 and 1.7.4 deltas: diff every
 serializable struct between the two tags, rather than reading handlers one by one. Extract
@@ -185,13 +216,13 @@ BK=~/git/github.com/artifact-keeper/artifact-keeper
 git -C "$BK" fetch --tags
 
 # 1. Did any consumed route move? (path + HTTP method)
-git -C "$BK" diff v1.8.0 v1.9.0 -- backend/src/api/routes.rs
+git -C "$BK" diff v1.9.1 v1.10.1 -- backend/src/api/routes.rs
 
 # 2. Diff each consumed struct. Repeat per row in the map above.
-git -C "$BK" diff v1.8.0 v1.9.0 -- backend/src/api/handlers/repositories.rs
-git -C "$BK" diff v1.8.0 v1.9.0 -- backend/src/api/handlers/peers.rs
+git -C "$BK" diff v1.9.1 v1.10.1 -- backend/src/api/handlers/repositories.rs
+git -C "$BK" diff v1.9.1 v1.10.1 -- backend/src/api/handlers/peers.rs
 # … etc. Inspect a struct at the new tag with:
-git -C "$BK" grep -n 'struct RepositoryResponse' v1.9.0
+git -C "$BK" grep -n 'struct RepositoryResponse' v1.10.1
 ```
 
 `routes.rs` alone is not the whole route table: most paths are declared in the per-handler
@@ -341,8 +372,7 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.9.1 (**51 resources + 4 data sources**); the
-1.9.1 pass added no endpoint to either side, since upstream's route table did not move.
+Not bugs; scope decisions. Current as of v1.10.1 (**52 resources + 4 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
 sub-config endpoints have `repository_*` resources (`repository_security`,
@@ -350,8 +380,36 @@ sub-config endpoints have `repository_*` resources (`repository_security`,
 `repository_pypi_track`, `repository_upstream_auth`, `repository_egress_proxy`,
 `repository_release_target`), and the v1.7.1 pass closed the last two API-only gaps.
 
-The 1.9.1 pass re-measured all three axes from scratch rather than inheriting the 1.8.0
-result, and all three come back clean:
+The 1.10.1 pass re-measured all three axes from scratch (scripts: `#[utoipa::path]`
+extraction for the route table, `pub struct` field extraction for the shapes, SDK symbol
+resolution for the UI). All three come back clean once `token_policy`, the `aws` block and
+`sso_saml.slug` are in:
+
+- **Endpoints.** 473 documented routes at v1.10.1 (467 under `/api/v1`, three health probes
+  and three PyPI JSON routes outside it) against 166 calls in `internal/client/*.go`. The
+  sixteen routes 1.10 adds bucket as: the token-policy pair (modelled), eight image-build
+  routes, two maintenance backfills, one external-findings ingest and three PyPI JSON
+  endpoints. Nothing declarative is left over.
+- **The web UI.** Resolving the 245 `@artifact-keeper/sdk` symbols the app imports against
+  `sdk.gen.ts` gives 225 endpoints, 121 of them writes, and 64 of those the provider does
+  not call. Every one is an imperative action (execute, preview, start/pause/resume/cancel,
+  promote, trigger, test, redeliver, rotate, revoke, acknowledge, suppress, approve/reject
+  a queue row), an enable/disable toggle the provider performs through the object's own
+  `enabled` field (`PATCH /admin/sso/*/toggle`, `POST /webhooks/{id}/enable`,
+  `POST /formats/{key}/enable`, `POST /sync-policies/{id}/toggle`), an auth/session/TOTP
+  flow, artifact/build/SBOM/upload data, or the incremental variant of a whole-set write
+  (`POST`/`DELETE /repositories/{key}/members`). Its 71 hand-written `apiFetch` calls (33
+  writes) add nothing new: the admin token-expiry card was the one configuration page with
+  no Terraform equivalent, and `token_policy` is it. The admin rate-limit page still calls
+  `GET /admin/rate-limits` and `GET/POST/DELETE /admin/rate-limits/exemptions`, which **do
+  not exist** in the backend at v1.10.1 either; exemptions remain env-only
+  (`RATE_LIMIT_EXEMPT_*`).
+- **Fields.** Three settable things arrived in 1.10 and all three are modelled: the token
+  policy object, `UpstreamAuthRequest.aws` with the two `aws_*` auth types, and the SAML
+  `slug`. `ImageBuildSettings` looks like a fourth and is not: it is built by
+  `ImageBuildSettings::from_env()` and has no write path.
+
+The 1.9.1 pass measured the same three axes and also came back clean:
 
 - **Endpoints.** 457 documented routes on upstream v1.9.1 — 454 under `/api/v1`, 3 outside
   — against the 164 calls extracted from `internal/client/*.go`. 296 `/api/v1` endpoints go
@@ -396,6 +454,10 @@ settable is unaccounted for.
 One false positive to know about when redoing this: the extractor reads Rust field names, so
 `InstallFromGitRequest.git_ref` looks missing when the provider does send it — the field is
 `#[serde(rename = "ref")]`. Check the serde attribute before believing a hit.
+
+**Closed in v1.10.1:** `token_policy` (the only declarative endpoint 1.10 adds), the
+`aws_ecr`/`aws_codeartifact` auth types and their `aws` settings block on
+`repository_upstream_auth`, and `sso_saml.slug`. Nothing settable is left unmodelled.
 
 **Closed in v1.9.1:** nothing was open. 1.9.1 adds no endpoint and one settable value,
 `project_membership.principal_type = "service_account"`, which was a client-side validator

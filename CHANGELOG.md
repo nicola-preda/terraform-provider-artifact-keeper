@@ -2,8 +2,63 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.9.1` = Artifact Keeper 1.9.1);
+the Artifact Keeper release it is validated against (`v1.10.1` = Artifact Keeper 1.10.1);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
+
+## [1.10.1] - 2026-09-28
+
+Validated against Artifact Keeper 1.10.1. The route table moves for the first time since
+1.8.0: **457 endpoints at 1.9.1, 473 at 1.10.1**, sixteen added and nothing removed. The
+struct diff finds 337 added fields and sixteen apparent removals, and every one of the
+sixteen is a non-break: two are relaxations (`AuthConfig.admin_break_glass_enabled` went
+`bool` to `Option<bool>`, `CiTokenRequest.provider_id` gained `#[serde(default)]`), twelve
+belong to internal service structs (`PluginService`, `ArtifactService`) or to the WASM
+plugin payloads the provider never touches (`WebhookPayload`, `ValidatorResult`), one is a
+doc-comment line the extractor mis-read as a field, and the last is a genuine tightening on
+an endpoint the provider never calls (`StorageGcRequest.dry_run` lost its default, so
+`POST /admin/storage/gc` now requires it).
+
+Two of the sixteen new routes are declarative, the token-policy `GET`/`PUT` pair. The other
+fourteen are the image-build engine (eight routes, builds and their logs), two maintenance
+backfills, the external-findings ingest and three PyPI JSON routes: imperative actions, CI
+data or package wire protocol. Its `image-builds/settings` read looks declarative and is
+not: `ImageBuildSettings::from_env()` means the whole block is environment-owned, with no
+write path. See
+[MAINTAINING.md](MAINTAINING.md#capability-gaps-backend-offers-provider-doesnt-model) for
+the bucketing.
+
+### Added
+
+- **`artifactkeeper_token_policy`**: the mint-time API token expiration policy
+  (`GET/PUT /admin/settings/token-policy`, #3460): `require_expiration`, the accepted
+  `min_days`/`max_days` band, the `default_days` applied when an enforced mint omits one,
+  and whether service accounts are in scope. A singleton like `totp_policy`, with the same
+  no-op destroy, and it is the admin UI's token-expiry card expressed as code.
+- **`artifactkeeper_repository_upstream_auth` speaks AWS** (#1559): `auth_type` accepts
+  `aws_ecr` and `aws_codeartifact` (the validator rejected them at plan time before), and a
+  new `aws` block carries `region`, `registry_id`, `domain`, `domain_owner` and
+  `duration_seconds`. No secret goes in it: the identity comes from the backend process's
+  own credential chain.
+- **`artifactkeeper_sso_saml.slug`** (#2583): the URL-safe alias the public SAML login and
+  ACS routes accept in place of the config's UUID, so a deployment rebuilt from scratch
+  keeps the ACS URL its IdP is registered with.
+
+### Upgrade notes
+
+- **`token_policy` fails with `409` when `API_TOKEN_EXPIRATION_REQUIRED` is set.** The
+  environment pin wins over the stored row in both directions and the backend refuses the
+  write outright rather than accepting it silently, so pick one owner: the variables or
+  this resource. `source` and `editable` report which is in force.
+- **A `slug` cannot be cleared, only replaced.** The backend preserves the stored value
+  when an update omits the field, deliberately, so an ACS URL an IdP already knows cannot
+  be dropped by a config that forgot to mention it. Dropping the attribute therefore keeps
+  the stored slug rather than unsetting it.
+- **The `aws` block is write-only, like the credentials beside it.** The backend returns
+  neither, so every apply re-sends them and drift in the AWS settings is invisible to
+  `terraform plan`. `configured`/`configured_auth_type` still show whether auth exists and
+  of what type.
+- **1.10.0 renumbered nothing and 1.10.1 adds no migration**, so the backend hop itself is
+  a plain image swap as far as this provider is concerned.
 
 ## [1.9.1] - 2026-09-14
 
