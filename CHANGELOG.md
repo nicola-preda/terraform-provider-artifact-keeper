@@ -5,6 +5,17 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.1` = Artifact Keeper 1.10.1);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Fixed
+
+- `repository`: importing a repository that sets `storage_backend` no longer plans a
+  replacement. The API never returns `storage_backend`, so an import leaves it null in
+  state, and the next plan used to destroy and recreate the repository (with every
+  artifact in it) and cascade that replacement to anything referencing its `id`. A change
+  from null now adopts the configured value with an in-place update that sends nothing;
+  changing or removing a known value still forces a new repository.
+
 ## [1.10.1] - 2026-09-28
 
 Validated against Artifact Keeper 1.10.1. The route table moves for the first time since

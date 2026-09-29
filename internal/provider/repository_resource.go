@@ -243,8 +243,12 @@ func (r *repositoryResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"storage_backend": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Override the storage backend for this repository. Non-admins may only use the default. Changing this forces a new repository.",
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				MarkdownDescription: "Override the storage backend for this repository. Non-admins may only use the default. Changing this forces a new repository. The API never returns this field, so after `terraform import` the configured value is adopted into state with an in-place update instead of a replacement.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIf(
+					storageBackendRequiresReplace,
+					"Changing this forces a new repository, except when the prior state has no value (e.g. right after import), since the API never returns it.",
+					"Changing this forces a new repository, except when the prior state has no value (e.g. right after `terraform import`), since the API never returns it.",
+				)},
 			},
 			"format_key": schema.StringAttribute{
 				Optional:            true,
@@ -843,6 +847,20 @@ func debianConfigFromObject(ctx context.Context, o types.Object) (*client.Debian
 		cfg.UpstreamGpgKeyID = m.UpstreamGpgKeyID.ValueStringPointer()
 	}
 	return cfg, diags
+}
+
+// storageBackendRequiresReplace forces replacement on a storage_backend change,
+// unless the prior state value is null. The API never returns storage_backend, so
+// an imported repository always has it null in state; replacing it (and cascading
+// the replacement to everything referencing its id) to "fix" that would destroy
+// every artifact in it. Instead the configured value is adopted into state by an
+// in-place update, which sends nothing for this field.
+//
+// Trade-off: adding storage_backend to the config of an existing repository that
+// was created without it is also adopted rather than replaced. The provider can't
+// tell whether the value matches the real backend in either case.
+func storageBackendRequiresReplace(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+	resp.RequiresReplace = !req.StateValue.IsNull()
 }
 
 // applyWriteOnlyRepoFields copies write-only/create-only fields (never returned

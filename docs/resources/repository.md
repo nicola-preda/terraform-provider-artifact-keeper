@@ -90,7 +90,7 @@ resource "artifactkeeper_repository" "debian_proxy" {
 - `quarantine_duration_minutes` (Number) Quarantine hold duration in minutes. Only meaningful when `quarantine_enabled` is true.
 - `quarantine_enabled` (Boolean) Hold newly uploaded artifacts in quarantine until they are scanned. Defaults to the instance-wide setting when unset.
 - `quota_bytes` (Number) Storage quota in bytes. Omit for unlimited.
-- `storage_backend` (String) Override the storage backend for this repository. Non-admins may only use the default. Changing this forces a new repository.
+- `storage_backend` (String) Override the storage backend for this repository. Non-admins may only use the default. Changing this forces a new repository. The API never returns this field, so after `terraform import` the configured value is adopted into state with an in-place update instead of a replacement.
 - `trusted_gpg_key` (String, Sensitive) ASCII-armored OpenPGP **public** key trusted to sign an RPM curation remote's `repomd.xml`. Write-only, the API never returns it (see `has_trusted_gpg_key`).
 - `upstream_url` (String) Upstream registry URL for `remote` (pull-through cache) repositories. Changing this forces a new repository.
 - `versioning_enabled` (Boolean) Enable first-class artifact versioning (Generic/Mlmodel repos append immutable revisions instead of overwriting). Defaults to `false`.
