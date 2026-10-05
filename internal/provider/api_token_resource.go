@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -25,7 +26,7 @@ import (
 var tokenScopes = []string{
 	"read:artifacts", "write:artifacts", "delete:artifacts", "promote:artifacts",
 	"read:repositories", "write:repositories", "delete:repositories",
-	"read:users", "write:users", "trigger:sync", "admin", "*",
+	"read:users", "write:users", "trigger:sync", "write:findings", "admin", "*",
 }
 
 var (
@@ -45,6 +46,7 @@ type apiTokenResourceModel struct {
 	Name          types.String `tfsdk:"name"`
 	Scopes        types.List   `tfsdk:"scopes"`
 	ExpiresInDays types.Int64  `tfsdk:"expires_in_days"`
+	RepoSelector  types.String `tfsdk:"repo_selector"`
 	Token         types.String `tfsdk:"token"`
 	TokenPrefix   types.String `tfsdk:"token_prefix"`
 	ExpiresAt     types.String `tfsdk:"expires_at"`
@@ -81,6 +83,11 @@ func (r *apiTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:            true,
 				MarkdownDescription: "Days until expiry (1-365). Omit for a non-expiring token.",
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+			},
+			"repo_selector": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Restrict the token to the repositories this selector matches, as a JSON object, e.g. `jsonencode({ match_formats = [\"docker\"] })`. Keys are `match_formats`, `match_labels`, `match_pattern` and `match_repos`; the server refuses an empty or unknown-key selector. Resolved at auth time, so new matching repos are picked up. Requires Artifact Keeper 1.10.2 or later. Its configured value is preserved in state. Changing this forces a new token.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -123,6 +130,9 @@ func (r *apiTokenResource) Create(ctx context.Context, req resource.CreateReques
 	if !plan.ExpiresInDays.IsNull() {
 		createReq.ExpiresInDays = plan.ExpiresInDays.ValueInt64Pointer()
 	}
+	if !plan.RepoSelector.IsNull() {
+		createReq.RepoSelector = json.RawMessage(plan.RepoSelector.ValueString())
+	}
 
 	created, err := r.client.CreateApiToken(ctx, createReq)
 	if err != nil {
@@ -140,6 +150,7 @@ func (r *apiTokenResource) Create(ctx context.Context, req resource.CreateReques
 	state, d := apiTokenToModel(ctx, meta)
 	resp.Diagnostics.Append(d...)
 	state.Token = types.StringValue(created.Token)
+	state.RepoSelector = plan.RepoSelector
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -163,6 +174,7 @@ func (r *apiTokenResource) Read(ctx context.Context, req resource.ReadRequest, r
 	refreshed, d := apiTokenToModel(ctx, meta)
 	resp.Diagnostics.Append(d...)
 	refreshed.Token = state.Token // secret preserved; never returned by the API
+	refreshed.RepoSelector = state.RepoSelector
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 

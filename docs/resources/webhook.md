@@ -49,7 +49,7 @@ variable "webhook_secret" {
 ### Optional
 
 - `event_schema_version` (String) Pinned event payload version. Defaults to `2026-04-01`. Changing this forces a new webhook.
-- `headers` (Map of String) Custom HTTP headers to send with each delivery. Changing this forces a new webhook.
+- `headers` (Map of String, Sensitive) Custom HTTP headers to send with each delivery. The API returns header values redacted as `***` (1.10.2), so values are kept from state and only the set of header names is checked for drift; an imported webhook therefore plans a replacement until its headers are configured. Changing this forces a new webhook.
 - `is_enabled` (Boolean) Whether the webhook is enabled. Defaults to `true`. This is the only attribute that can be changed in place.
 - `payload_template` (String) Payload layout for the target platform. Defaults to `generic`. Changing this forces a new webhook.
 - `repository_id` (String) UUID of the repository this webhook is scoped to. Omit for a global webhook. Changing this forces a new webhook.

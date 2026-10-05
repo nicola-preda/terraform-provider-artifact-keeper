@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -20,11 +21,13 @@ type ApiToken struct {
 	CreatedAt   string   `json:"created_at"`
 }
 
-// CreateApiTokenRequest maps CreateAccessTokenRequest (profile endpoint).
+// CreateApiTokenRequest maps CreateAccessTokenRequest (profile endpoint), or
+// CreateApiTokenRequest (auth endpoint) when RepoSelector is set.
 type CreateApiTokenRequest struct {
-	Name          string   `json:"name"`
-	Scopes        []string `json:"scopes,omitempty"`
-	ExpiresInDays *int64   `json:"expires_in_days,omitempty"`
+	Name          string          `json:"name"`
+	Scopes        []string        `json:"scopes,omitempty"`
+	ExpiresInDays *int64          `json:"expires_in_days,omitempty"`
+	RepoSelector  json.RawMessage `json:"repo_selector,omitempty"`
 }
 
 // ApiTokenCreated is the create-only response that includes the plaintext token.
@@ -39,10 +42,19 @@ type apiTokenListResponse struct {
 }
 
 // CreateApiToken mints a token for the authenticated user via
-// POST /profile/access-tokens. The plaintext token is only returned here.
+// POST /profile/access-tokens, or POST /auth/tokens for a repo-scoped token
+// (only that endpoint takes repo_selector, 1.10.2+). The plaintext token is only
+// returned here.
 func (c *Client) CreateApiToken(ctx context.Context, req CreateApiTokenRequest) (*ApiTokenCreated, error) {
 	var out ApiTokenCreated
-	if err := c.do(ctx, http.MethodPost, "/profile/access-tokens", req, &out); err != nil {
+	path := "/profile/access-tokens"
+	if len(req.RepoSelector) > 0 {
+		path = "/auth/tokens"
+		if len(req.Scopes) == 0 {
+			req.Scopes = []string{"read:artifacts"} // required there; the profile endpoint's default
+		}
+	}
+	if err := c.do(ctx, http.MethodPost, path, req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

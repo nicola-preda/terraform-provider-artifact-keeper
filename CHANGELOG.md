@@ -2,8 +2,42 @@
 
 All notable changes to this provider are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The provider version tracks
-the Artifact Keeper release it is validated against (`v1.10.1` = Artifact Keeper 1.10.1);
+the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
+
+## [1.10.2] - 2026-10-05
+
+Validated against Artifact Keeper 1.10.2, a token-scoping security release. No route moved
+and no field was removed; the struct diff is one added field (`repo_selector` on
+`POST /auth/tokens`) plus `deny_unknown_fields` on all five token-mint requests, and every
+field the provider sends is in those structs.
+
+### Fixed
+
+- **`artifactkeeper_webhook` no longer replaces a webhook with `headers` on every apply.**
+  1.10.2 returns header values redacted as `***` (#3901), and `headers` forces replacement,
+  so each refresh planned a destroy and create. Values are now kept from state wherever the
+  API redacts them; a header added or removed server-side still shows as drift. `headers` is
+  now sensitive. An imported webhook cannot recover its header values, so it plans a
+  replacement until they are in config.
+
+### Added
+
+- **`artifactkeeper_api_token.repo_selector`**, the repository scope the web UI's Access
+  Tokens page sets on a personal token, which 1.10.2 is the first release to store and
+  enforce (#4224). When set, the token is minted through `POST /auth/tokens`, the only
+  personal-token endpoint that takes a selector. Needs 1.10.2: older backends dropped it and
+  minted the token unrestricted.
+- **`write:findings`** is accepted in token `scopes` (#3411); plan-time validation rejected it.
+
+### Behaviour changes in 1.10.2 that need no provider change
+
+- Token mints refuse an empty or unknown-key `repo_selector`, and a service-account
+  `repository_ids = []`, with a 400.
+- Repository management through a token now needs `write:repositories` (`read:` for reads,
+  `delete:repositories` to destroy). Admin and `*` tokens are unaffected.
+- A token minted by a repository-restricted credential inherits its restriction, and
+  naming a different one is a 403.
 
 ## [1.10.1] - 2026-09-28
 

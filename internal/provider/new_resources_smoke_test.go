@@ -40,6 +40,18 @@ resource "artifactkeeper_webhook" "notify" {
   url              = "https://hooks.example.com/tf-acc"
   events           = ["artifact_uploaded"]
   payload_template = "slack"
+  headers          = { Authorization = "Bearer tf-acc" }
+}
+
+resource "artifactkeeper_api_token" "plain" {
+  name   = "tf-acc-token"
+  scopes = ["read:artifacts", "write:findings"]
+}
+
+resource "artifactkeeper_api_token" "scoped" {
+  name          = "tf-acc-token-scoped"
+  scopes        = ["read:artifacts"]
+  repo_selector = jsonencode({ match_formats = ["npm"] })
 }
 
 resource "artifactkeeper_ci_oidc_provider" "gl" {
@@ -173,6 +185,9 @@ resource "artifactkeeper_project_membership" "ci" {
 					resource.TestCheckResourceAttrSet("artifactkeeper_service_account.ci", "username"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_signing_key.global", "fingerprint"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_webhook.notify", "id"),
+					resource.TestCheckResourceAttr("artifactkeeper_webhook.notify", "headers.Authorization", "Bearer tf-acc"),
+					resource.TestCheckResourceAttrSet("artifactkeeper_api_token.plain", "token"),
+					resource.TestCheckResourceAttrSet("artifactkeeper_api_token.scoped", "token"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_ci_oidc_provider.gl", "id"),
 					resource.TestCheckResourceAttrSet("artifactkeeper_remote_instance.mirror", "id"),
 					resource.TestCheckResourceAttr("artifactkeeper_quality_gate.baseline", "action", "block"),

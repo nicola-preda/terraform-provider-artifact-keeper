@@ -37,9 +37,15 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.10.1** (2026-09-28) |
-| Provider changes needed | one new resource (`token_policy`), one widened enum plus a nested block (`repository_upstream_auth` AWS auth), one new field (`sso_saml.slug`) |
-| Acceptance suite | run live against the 1.10.1 backend image (2026-09-28) |
+| Validated against | **Artifact Keeper 1.10.2** (2026-10-05) |
+| Provider changes needed | `webhook.headers` kept from state (values now read back as `***`), new `api_token.repo_selector`, `write:findings` scope |
+| Acceptance suite | run live against the 1.10.2 backend image (2026-10-05): 15 pass |
+
+1.10.2 moved no route and removed no field. What it changed is strictness: the five
+token-mint requests are `deny_unknown_fields`, so sending a field the backend lacks is now a
+400 rather than ignored, and webhook reads redact header values. Re-check both on the next
+pass: diff the provider's request structs against the backend's, and look for any read that
+returns a placeholder instead of the stored value.
 
 1.10 is the first release since 1.8.0 whose route table moves: **457 documented endpoints at
 1.9.1, 473 at 1.10.1**, sixteen added and none removed, renamed or retyped. Sixteen fields
@@ -203,7 +209,7 @@ that handler on a bump.
 ## How to re-check drift on a version bump
 
 When the backend moves to a new tag (say `v1.11.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.10.1`).
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.10.2`).
 
 Fastest first pass, and the one that actually caught both the 1.7.1 and 1.7.4 deltas: diff every
 serializable struct between the two tags, rather than reading handlers one by one. Extract
@@ -372,7 +378,7 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.10.1 (**52 resources + 4 data sources**).
+Not bugs; scope decisions. Current as of v1.10.2 (**52 resources + 4 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
 sub-config endpoints have `repository_*` resources (`repository_security`,
@@ -559,7 +565,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.9.1 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.10.2 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh

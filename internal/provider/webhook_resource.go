@@ -92,7 +92,8 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Custom HTTP headers to send with each delivery. Changing this forces a new webhook.",
+				Sensitive:           true,
+				MarkdownDescription: "Custom HTTP headers to send with each delivery. The API returns header values redacted as `***` (1.10.2), so values are kept from state and only the set of header names is checked for drift; an imported webhook therefore plans a replacement until its headers are configured. Changing this forces a new webhook.",
 				PlanModifiers:       []planmodifier.Map{mapplanmodifier.RequiresReplace()},
 			},
 			"payload_template": schema.StringAttribute{
@@ -192,6 +193,8 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 	}
 
+	d = keepRedactedHeaders(ctx, wh, plan.Headers)
+	resp.Diagnostics.Append(d...)
 	state, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
 	// The API never returns the secret on read. Preserve the configured secret,
@@ -224,6 +227,8 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
+	d := keepRedactedHeaders(ctx, wh, state.Headers)
+	resp.Diagnostics.Append(d...)
 	refreshed, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
 	refreshed.Secret = state.Secret // not returned by the API; preserved from config
@@ -252,6 +257,8 @@ func (r *webhookResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	d := keepRedactedHeaders(ctx, wh, plan.Headers)
+	resp.Diagnostics.Append(d...)
 	state, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
 	state.Secret = plan.Secret // not returned by the API; preserved from config
@@ -271,6 +278,20 @@ func (r *webhookResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 func (r *webhookResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// redactedHeaderValue is what the API returns in place of every header value (1.10.2, #3901).
+const redactedHeaderValue = "***"
+
+// keepRedactedHeaders puts the known value back for each header the API redacted.
+func keepRedactedHeaders(ctx context.Context, wh *client.Webhook, known types.Map) diag.Diagnostics {
+	prior, d := mapToStringMap(ctx, known)
+	for k, v := range wh.Headers {
+		if p, ok := prior[k]; ok && v == redactedHeaderValue {
+			wh.Headers[k] = p
+		}
+	}
+	return d
 }
 
 func webhookToModel(ctx context.Context, wh *client.Webhook) (webhookResourceModel, diag.Diagnostics) {
