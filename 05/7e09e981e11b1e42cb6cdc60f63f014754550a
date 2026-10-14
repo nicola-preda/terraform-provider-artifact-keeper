@@ -1,0 +1,148 @@
+CHANGELOG.md
+  h_206b40f42abaf2 8-50
+MAINTAINING.md
+  h_206b40f42abaf2 40-65,235,404,487-499,604
+README.md
+  h_206b40f42abaf2 10,15,21-22,32-33,50
+docker-compose.test.yml
+  h_206b40f42abaf2 45
+docs/index.md
+  h_206b40f42abaf2 5,10,21
+docs/resources/ci_oidc_identity_mapping.md
+  h_206b40f42abaf2 55
+docs/resources/ci_oidc_provider.md
+  h_206b40f42abaf2 37,39
+docs/resources/lifecycle_policy.md
+  h_206b40f42abaf2 47,51,56-57
+docs/resources/permission.md
+  h_206b40f42abaf2 34,38-41
+docs/resources/repository.md
+  h_206b40f42abaf2 84,87-88,95,100-101
+docs/resources/repository_allowlist.md
+  h_206b40f42abaf2 1-64
+docs/resources/repository_security.md
+  h_206b40f42abaf2 37-38
+docs/resources/repository_upstream_filter.md
+  h_206b40f42abaf2 1-49
+docs/resources/runtime_settings.md
+  h_206b40f42abaf2 1-47
+docs/resources/security_policy.md
+  h_206b40f42abaf2 54
+docs/resources/signing_key.md
+  h_206b40f42abaf2 51
+docs/resources/system_banner.md
+  h_206b40f42abaf2 1-60
+docs/resources/user.md
+  h_206b40f42abaf2 40
+docs/resources/webhook.md
+  h_206b40f42abaf2 57
+examples/provider/provider.tf
+  h_206b40f42abaf2 7
+examples/resources/artifactkeeper_repository_allowlist/import.sh
+  h_206b40f42abaf2 1
+examples/resources/artifactkeeper_repository_allowlist/resource.tf
+  h_206b40f42abaf2 1-10
+examples/resources/artifactkeeper_repository_upstream_filter/import.sh
+  h_206b40f42abaf2 1
+examples/resources/artifactkeeper_repository_upstream_filter/resource.tf
+  h_206b40f42abaf2 1-6
+examples/resources/artifactkeeper_runtime_settings/import.sh
+  h_206b40f42abaf2 1
+examples/resources/artifactkeeper_runtime_settings/resource.tf
+  h_206b40f42abaf2 1-4
+examples/resources/artifactkeeper_system_banner/import.sh
+  h_206b40f42abaf2 1
+examples/resources/artifactkeeper_system_banner/resource.tf
+  h_206b40f42abaf2 1-10
+internal/client/banner.go
+  h_206b40f42abaf2 1-65
+internal/client/ci_oidc_mapping.go
+  h_206b40f42abaf2 22-26,33-38,42-43,45-50
+internal/client/ci_oidc_provider.go
+  h_206b40f42abaf2 5,14-24,38-40
+internal/client/lifecycle_policy.go
+  h_206b40f42abaf2 14-15,33-41,46-47,49-56
+internal/client/permission.go
+  h_206b40f42abaf2 12-22,32-38
+internal/client/repository.go
+  h_206b40f42abaf2 18,29,75-95,110-125
+internal/client/repository_allowlist.go
+  h_206b40f42abaf2 1-52
+internal/client/repository_security.go
+  h_206b40f42abaf2 20
+internal/client/repository_upstream_filter.go
+  h_206b40f42abaf2 1-49
+internal/client/runtime_settings.go
+  h_206b40f42abaf2 1-46
+internal/client/security_policy.go
+  h_206b40f42abaf2 5,13-25,32-40,48-56
+internal/client/user.go
+  h_206b40f42abaf2 93-101
+internal/client/webhook.go
+  h_206b40f42abaf2 22,39
+internal/provider/ci_oidc_mapping_resource.go
+  h_206b40f42abaf2 35-44,84-88,125-126,128-134,207-208,210-222,265-266,268-277
+internal/provider/ci_oidc_provider_resource.go
+  h_206b40f42abaf2 5-7,40-41,85-95,126,146,162,194-197,201-214,216-217
+internal/provider/helpers.go
+  h_206b40f42abaf2 60-69,110-188
+internal/provider/helpers_json_test.go
+  h_206b40f42abaf2 1-29
+internal/provider/lifecycle_policy_resource.go
+  h_206b40f42abaf2 7,9,16,40-41,70-71,74-87,104,112,170-175,204-205,227-228,266-275,289-290,310-315,319-320,332
+internal/provider/permission_resource.go
+  h_206b40f42abaf2 6,41,57-58,66-73,161-163,169-173,178-179,189
+internal/provider/provider.go
+  h_206b40f42abaf2 25,201-204
+internal/provider/provider_test.go
+  h_206b40f42abaf2 31-32
+internal/provider/repository_allowlist_resource.go
+  h_206b40f42abaf2 1-198
+internal/provider/repository_resource.go
+  h_206b40f42abaf2 7-8,22,33,45-86,159-160,163-169,249-268,424-458,475-477,498-502,656-658,676-686,807,822,867-871,951-953
+internal/provider/repository_security_resource.go
+  h_206b40f42abaf2 91,104-105
+internal/provider/repository_upstream_filter_resource.go
+  h_206b40f42abaf2 1-172
+internal/provider/runtime_settings_resource.go
+  h_206b40f42abaf2 1-144
+internal/provider/security_policy_resource.go
+  h_206b40f42abaf2 42,104-109,135,172,192,203,224,242,244
+internal/provider/signing_key_resource.go
+  h_206b40f42abaf2 82-83
+internal/provider/system_banner_resource.go
+  h_206b40f42abaf2 1-212
+internal/provider/user_resource.go
+  h_206b40f42abaf2 55,154-161,163
+internal/provider/v1_11_resources_acc_test.go
+  h_206b40f42abaf2 1-3,4,5-12,13-15,16-167
+internal/provider/webhook_resource.go
+  h_206b40f42abaf2 44,114-120,184-186,323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "057e09e981e11b1e42cb6cdc60f63f014754550a",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 2107,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 229,
+    "git_diff_added_lines": 2107,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "2a7d195c288026cc7bee08a91c462d10cd28ad8e",
+      "8014bee572073a8943874899afbc8a7d865d9425"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}
