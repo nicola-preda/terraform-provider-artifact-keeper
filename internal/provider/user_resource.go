@@ -52,7 +52,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"id":                   schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"username":             schema.StringAttribute{Required: true, MarkdownDescription: "Unique username. Changing it forces a new user.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
 			"email":                schema.StringAttribute{Required: true},
-			"password":             schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Initial password; if omitted a password is generated (see `generated_password`). Not returned by the API. Changing it forces a new user.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+			"password":             schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Password; if omitted at create a password is generated (see `generated_password`). Not returned by the API. Changing it sets the new password in place, as an admin does in the UI."},
 			"display_name":         schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"is_admin":             schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
 			"is_active":            schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `true`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
@@ -151,8 +151,16 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Error updating user", err.Error())
 		return
 	}
+	password := state.Password
+	if !plan.Password.IsNull() && !plan.Password.IsUnknown() && !plan.Password.Equal(state.Password) {
+		if err := r.client.SetUserPassword(ctx, plan.ID.ValueString(), plan.Password.ValueString()); err != nil {
+			resp.Diagnostics.AddError("Error setting user password", err.Error())
+			return
+		}
+		password = plan.Password
+	}
 	refreshed := userToModel(u)
-	refreshed.Password = state.Password
+	refreshed.Password = password
 	refreshed.GeneratedPassword = state.GeneratedPassword
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }

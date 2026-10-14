@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/url"
 )
@@ -10,15 +11,17 @@ import (
 // trusts JWTs issued by the configured issuer (workload identity), so the
 // provider is validated against the issuer's JWKS rather than a client secret.
 type CiOidcProvider struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	ProviderType string `json:"provider_type"`
-	IssuerURL    string `json:"issuer_url"`
-	Audience     string `json:"audience"`
-	IsEnabled    bool   `json:"is_enabled"`
-	MappingCount int64  `json:"mapping_count"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	ProviderType string          `json:"provider_type"`
+	IssuerURL    string          `json:"issuer_url"`
+	Audience     string          `json:"audience"`
+	IsEnabled    bool            `json:"is_enabled"`
+	MappingCount int64           `json:"mapping_count"`
+	KeySource    string          `json:"key_source"`
+	StaticJWKS   json.RawMessage `json:"static_jwks"`
+	CreatedAt    string          `json:"created_at"`
+	UpdatedAt    string          `json:"updated_at"`
 }
 
 // CiOidcProviderRequest is used for both create (POST) and update (PUT).
@@ -32,6 +35,9 @@ type CiOidcProviderRequest struct {
 	IssuerURL    *string `json:"issuer_url,omitempty"`
 	Audience     *string `json:"audience,omitempty"`
 	IsEnabled    *bool   `json:"is_enabled,omitempty"`
+	KeySource    *string `json:"key_source,omitempty"`
+	// StaticJWKS replaces the stored JWKS whole; only with key_source=static.
+	StaticJWKS json.RawMessage `json:"static_jwks,omitempty"`
 }
 
 func (c *Client) CreateCiOidcProvider(ctx context.Context, req CiOidcProviderRequest) (*CiOidcProvider, error) {

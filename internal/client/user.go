@@ -90,3 +90,12 @@ func (c *Client) UpdateUser(ctx context.Context, id string, req UpdateUserReques
 func (c *Client) DeleteUser(ctx context.Context, id string) error {
 	return c.do(ctx, http.MethodDelete, "/users/"+url.PathEscape(id), nil, nil)
 }
+
+// SetUserPassword sets another user's password as an admin
+// (POST /users/{id}/password; current_password is only required of non-admins).
+func (c *Client) SetUserPassword(ctx context.Context, id, newPassword string) error {
+	body := struct {
+		NewPassword string `json:"new_password"`
+	}{newPassword}
+	return c.do(ctx, http.MethodPost, "/users/"+url.PathEscape(id)+"/password", body, nil)
+}

@@ -17,9 +17,7 @@ type RepositorySecurity struct {
 	ScanOnProxy            bool   `json:"scan_on_proxy"`
 	BlockOnPolicyViolation bool   `json:"block_on_policy_violation"`
 	SeverityThreshold      string `json:"severity_threshold"`
-	// Fail-open vs fail-closed for the inline proxy scan-on-fetch (#2954):
-	// "fail_open" (default) serves the artifact if the scan cannot run,
-	// "fail_closed" refuses it.
+	// "fail_open" (default), "fail_closed" or "record_only" (1.11.0, #3645).
 	ProxyScanAction string `json:"proxy_scan_action"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`

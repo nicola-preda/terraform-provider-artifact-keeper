@@ -34,7 +34,9 @@ resource "artifactkeeper_ci_oidc_provider" "gitlab_ci" {
 
 - `audience` (String) Expected `aud` claim in CI tokens. Defaults to `artifact-keeper`.
 - `is_enabled` (Boolean) Whether the provider is enabled. Defaults to `true`.
+- `key_source` (String) How signing keys are found (Artifact Keeper 1.11.0): `discovery` (default, the issuer's OIDC discovery document) or `static` (only `static_jwks`, never contacting the issuer, e.g. for an on-prem Kubernetes cluster).
 - `provider_type` (String) Provider flavor (free-form, e.g. `generic`, `github`, `gitlab`); only affects the derived username format. Defaults to `generic`.
+- `static_jwks` (String) The JWKS a `static` provider verifies against, as JSON (`{"keys": [...]}`, e.g. the output of `kubectl get --raw /openid/v1/jwks`). Required with `key_source = "static"`, refused otherwise. Public RSA or EC keys with unique `kid`s.
 
 ### Read-Only
 

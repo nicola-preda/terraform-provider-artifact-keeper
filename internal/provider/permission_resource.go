@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -37,6 +38,7 @@ type permissionResourceModel struct {
 	TargetID      types.String `tfsdk:"target_id"`
 	TargetName    types.String `tfsdk:"target_name"`
 	Actions       types.List   `tfsdk:"actions"`
+	AllowedCIDRs  types.List   `tfsdk:"allowed_cidrs"`
 	CreatedAt     types.String `tfsdk:"created_at"`
 	UpdatedAt     types.String `tfsdk:"updated_at"`
 }
@@ -52,8 +54,8 @@ func (r *permissionResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"id": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"principal_type": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Principal kind: `user`, `group`, or `service_account`. The principal must already exist; the server rejects a grant to an unknown id.",
-				Validators:          []validator.String{stringvalidator.OneOf("user", "group", "service_account")},
+				MarkdownDescription: "Principal kind: `user`, `group`, `service_account`, or `anonymous` (every unauthenticated caller, Artifact Keeper 1.11.0; use `principal_id = \"00000000-0000-0000-0000-000000000000\"` and only `read` on a repository or project). The principal must already exist; the server rejects a grant to an unknown id.",
+				Validators:          []validator.String{stringvalidator.OneOf("user", "group", "service_account", "anonymous")},
 			},
 			"principal_id":   schema.StringAttribute{Required: true, MarkdownDescription: "UUID of the principal."},
 			"principal_name": schema.StringAttribute{Computed: true},
@@ -61,8 +63,14 @@ func (r *permissionResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"target_id":      schema.StringAttribute{Required: true, MarkdownDescription: "UUID of the target resource."},
 			"target_name":    schema.StringAttribute{Computed: true},
 			"actions":        schema.ListAttribute{ElementType: types.StringType, Required: true, MarkdownDescription: "Actions: `read`, `write`, `delete`, `admin`."},
-			"created_at":     schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
-			"updated_at":     schema.StringAttribute{Computed: true},
+			"allowed_cidrs": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "CIDR ranges (IPv4 or IPv6) the client IP must fall inside for the rule to apply (Artifact Keeper 1.11.0). Omit for no IP restriction; an empty list is rejected.",
+				Validators:          []validator.List{listvalidator.SizeAtLeast(1)},
+			},
+			"created_at": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+			"updated_at": schema.StringAttribute{Computed: true},
 		},
 	}
 }
@@ -150,17 +158,25 @@ func (r *permissionResource) ImportState(ctx context.Context, req resource.Impor
 
 func permissionRequestFromModel(ctx context.Context, m permissionResourceModel) (client.PermissionRequest, diag.Diagnostics) {
 	actions, d := listToStringSlice(ctx, m.Actions)
-	return client.PermissionRequest{
+	cidrs, d2 := listToStringSlice(ctx, m.AllowedCIDRs)
+	d.Append(d2...)
+	req := client.PermissionRequest{
 		PrincipalType: m.PrincipalType.ValueString(),
 		PrincipalID:   m.PrincipalID.ValueString(),
 		TargetType:    m.TargetType.ValueString(),
 		TargetID:      m.TargetID.ValueString(),
 		Actions:       actions,
-	}, d
+	}
+	if cidrs != nil {
+		req.Conditions = &client.PermissionConditions{AllowedCIDRs: cidrs}
+	}
+	return req, d
 }
 
 func permissionToModel(ctx context.Context, p *client.Permission) (permissionResourceModel, diag.Diagnostics) {
 	actions, d := stringListValue(ctx, p.Actions)
+	cidrs, d2 := stringListValue(ctx, p.Conditions.AllowedCIDRs)
+	d.Append(d2...)
 	return permissionResourceModel{
 		ID:            types.StringValue(p.ID),
 		PrincipalType: types.StringValue(p.PrincipalType),
@@ -170,6 +186,7 @@ func permissionToModel(ctx context.Context, p *client.Permission) (permissionRes
 		TargetID:      types.StringValue(p.TargetID),
 		TargetName:    stringPointerValue(p.TargetName),
 		Actions:       actions,
+		AllowedCIDRs:  cidrs,
 		CreatedAt:     types.StringValue(p.CreatedAt),
 		UpdatedAt:     types.StringValue(p.UpdatedAt),
 	}, d

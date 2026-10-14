@@ -9,16 +9,17 @@ import (
 // Permission mirrors PermissionResponse: a grant of actions to a principal
 // (user/group) on a target (repository/group/system/...).
 type Permission struct {
-	ID            string   `json:"id"`
-	PrincipalType string   `json:"principal_type"`
-	PrincipalID   string   `json:"principal_id"`
-	PrincipalName *string  `json:"principal_name"`
-	TargetType    string   `json:"target_type"`
-	TargetID      string   `json:"target_id"`
-	TargetName    *string  `json:"target_name"`
-	Actions       []string `json:"actions"`
-	CreatedAt     string   `json:"created_at"`
-	UpdatedAt     string   `json:"updated_at"`
+	ID            string               `json:"id"`
+	PrincipalType string               `json:"principal_type"`
+	PrincipalID   string               `json:"principal_id"`
+	PrincipalName *string              `json:"principal_name"`
+	TargetType    string               `json:"target_type"`
+	TargetID      string               `json:"target_id"`
+	TargetName    *string              `json:"target_name"`
+	Actions       []string             `json:"actions"`
+	Conditions    PermissionConditions `json:"conditions"`
+	CreatedAt     string               `json:"created_at"`
+	UpdatedAt     string               `json:"updated_at"`
 }
 
 // PermissionRequest is used for both create (POST) and update (PUT).
@@ -28,6 +29,13 @@ type PermissionRequest struct {
 	TargetType    string   `json:"target_type"`
 	TargetID      string   `json:"target_id"`
 	Actions       []string `json:"actions"`
+	// Omitted means unconditional, on update too.
+	Conditions *PermissionConditions `json:"conditions,omitempty"`
+}
+
+// PermissionConditions narrows when a rule applies (#1849, 1.11.0).
+type PermissionConditions struct {
+	AllowedCIDRs []string `json:"allowed_cidrs,omitempty"`
 }
 
 func (c *Client) CreatePermission(ctx context.Context, req PermissionRequest) (*Permission, error) {

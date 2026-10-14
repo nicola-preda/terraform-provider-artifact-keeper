@@ -32,15 +32,16 @@ type ciOidcMappingResource struct {
 }
 
 type ciOidcMappingResourceModel struct {
-	ID             types.String `tfsdk:"id"`
-	ProviderID     types.String `tfsdk:"provider_id"`
-	Name           types.String `tfsdk:"name"`
-	Priority       types.Int64  `tfsdk:"priority"`
-	ClaimFilters   types.String `tfsdk:"claim_filters"`
-	AllowedRepoIDs types.List   `tfsdk:"allowed_repo_ids"`
-	IsEnabled      types.Bool   `tfsdk:"is_enabled"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	UpdatedAt      types.String `tfsdk:"updated_at"`
+	ID              types.String `tfsdk:"id"`
+	ProviderID      types.String `tfsdk:"provider_id"`
+	Name            types.String `tfsdk:"name"`
+	Priority        types.Int64  `tfsdk:"priority"`
+	ClaimFilters    types.String `tfsdk:"claim_filters"`
+	AllowedRepoIDs  types.List   `tfsdk:"allowed_repo_ids"`
+	GroupBindingIDs types.List   `tfsdk:"group_binding_ids"`
+	IsEnabled       types.Bool   `tfsdk:"is_enabled"`
+	CreatedAt       types.String `tfsdk:"created_at"`
+	UpdatedAt       types.String `tfsdk:"updated_at"`
 }
 
 func (r *ciOidcMappingResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -80,6 +81,11 @@ func (r *ciOidcMappingResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:            true,
 				MarkdownDescription: "Optional list of repository UUIDs this mapping is restricted to. Omit for an unrestricted mapping.",
 			},
+			"group_binding_ids": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "Groups the mapping's service account is a member of, reconciled on every exchange (Artifact Keeper 1.11.0): the access lives on the mapping instead of in a separate group membership. Omit to make no claim; an empty list strips every membership.",
+			},
 			"is_enabled": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -116,10 +122,16 @@ func (r *ciOidcMappingResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	groupIDs, d := listToStringSlice(ctx, plan.GroupBindingIDs)
+	resp.Diagnostics.Append(d...)
 	createReq := client.CreateCiOidcMappingRequest{
-		Name:           plan.Name.ValueString(),
-		ClaimFilters:   json.RawMessage(plan.ClaimFilters.ValueString()),
-		AllowedRepoIDs: repoIDs,
+		Name:            plan.Name.ValueString(),
+		ClaimFilters:    json.RawMessage(plan.ClaimFilters.ValueString()),
+		AllowedRepoIDs:  repoIDs,
+		GroupBindingIDs: groupIDs,
+	}
+	if groupIDs == nil && !plan.GroupBindingIDs.IsNull() {
+		createReq.GroupBindingIDs = []string{}
 	}
 	if !plan.Priority.IsNull() && !plan.Priority.IsUnknown() {
 		createReq.Priority = plan.Priority.ValueInt64Pointer()
@@ -192,12 +204,22 @@ func (r *ciOidcMappingResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	groupIDs, d := listToStringSlice(ctx, plan.GroupBindingIDs)
+	resp.Diagnostics.Append(d...)
 	updateReq := client.UpdateCiOidcMappingRequest{
-		Name:           plan.Name.ValueStringPointer(),
-		Priority:       plan.Priority.ValueInt64Pointer(),
-		ClaimFilters:   json.RawMessage(plan.ClaimFilters.ValueString()),
-		AllowedRepoIDs: repoIDs,
-		IsEnabled:      plan.IsEnabled.ValueBoolPointer(),
+		Name:         plan.Name.ValueStringPointer(),
+		Priority:     plan.Priority.ValueInt64Pointer(),
+		ClaimFilters: json.RawMessage(plan.ClaimFilters.ValueString()),
+		IsEnabled:    plan.IsEnabled.ValueBoolPointer(),
+	}
+	if !plan.AllowedRepoIDs.IsNull() {
+		updateReq.AllowedRepoIDs = &repoIDs
+	}
+	if !plan.GroupBindingIDs.IsNull() {
+		if groupIDs == nil {
+			groupIDs = []string{}
+		}
+		updateReq.GroupBindingIDs = &groupIDs
 	}
 
 	mapping, err := r.client.UpdateCiOidcMapping(ctx, plan.ProviderID.ValueString(), plan.ID.ValueString(), updateReq)
@@ -240,15 +262,18 @@ func (r *ciOidcMappingResource) ImportState(ctx context.Context, req resource.Im
 
 func ciOidcMappingToModel(ctx context.Context, m *client.CiOidcMapping) (ciOidcMappingResourceModel, diag.Diagnostics) {
 	repoIDs, d := stringListValue(ctx, m.AllowedRepoIDs)
+	groupIDs, d2 := stringListValue(ctx, m.GroupBindingIDs)
+	d.Append(d2...)
 	return ciOidcMappingResourceModel{
-		ID:             types.StringValue(m.ID),
-		ProviderID:     types.StringValue(m.ProviderID),
-		Name:           types.StringValue(m.Name),
-		Priority:       types.Int64Value(m.Priority),
-		ClaimFilters:   types.StringValue(string(m.ClaimFilters)),
-		AllowedRepoIDs: repoIDs,
-		IsEnabled:      types.BoolValue(m.IsEnabled),
-		CreatedAt:      types.StringValue(m.CreatedAt),
-		UpdatedAt:      types.StringValue(m.UpdatedAt),
+		ID:              types.StringValue(m.ID),
+		ProviderID:      types.StringValue(m.ProviderID),
+		Name:            types.StringValue(m.Name),
+		Priority:        types.Int64Value(m.Priority),
+		ClaimFilters:    types.StringValue(string(m.ClaimFilters)),
+		AllowedRepoIDs:  repoIDs,
+		GroupBindingIDs: groupIDs,
+		IsEnabled:       types.BoolValue(m.IsEnabled),
+		CreatedAt:       types.StringValue(m.CreatedAt),
+		UpdatedAt:       types.StringValue(m.UpdatedAt),
 	}, d
 }

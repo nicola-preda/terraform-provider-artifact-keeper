@@ -41,6 +41,7 @@ type webhookResourceModel struct {
 	Headers              types.Map    `tfsdk:"headers"`
 	PayloadTemplate      types.String `tfsdk:"payload_template"`
 	EventSchemaVersion   types.String `tfsdk:"event_schema_version"`
+	SigningMode          types.String `tfsdk:"signing_mode"`
 	IsEnabled            types.Bool   `tfsdk:"is_enabled"`
 	SecretDigest         types.String `tfsdk:"secret_digest"`
 	SecretRotationActive types.Bool   `tfsdk:"secret_rotation_active"`
@@ -110,6 +111,13 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:          []validator.String{stringvalidator.OneOf("2026-04-01")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
+			"signing_mode": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "How deliveries are signed (Artifact Keeper 1.11.0): `hmac` (default, with `secret`), `asymmetric` (the instance Ed25519 key, verifiable against `GET /api/v1/webhooks/jwks`), or `both`. The asymmetric modes need `AK_WEBHOOK_SECRET_KEY` on the server. Changing this forces a new webhook.",
+				Validators:          []validator.String{stringvalidator.OneOf("hmac", "asymmetric", "both")},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+			},
 			"is_enabled": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
@@ -172,6 +180,9 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	if !plan.EventSchemaVersion.IsNull() && !plan.EventSchemaVersion.IsUnknown() {
 		createReq.EventSchemaVersion = plan.EventSchemaVersion.ValueStringPointer()
+	}
+	if !plan.SigningMode.IsNull() && !plan.SigningMode.IsUnknown() {
+		createReq.SigningMode = plan.SigningMode.ValueStringPointer()
 	}
 
 	wh, generatedSecret, err := r.client.CreateWebhook(ctx, createReq)
@@ -309,6 +320,7 @@ func webhookToModel(ctx context.Context, wh *client.Webhook) (webhookResourceMod
 		Headers:              headers,
 		PayloadTemplate:      types.StringValue(wh.PayloadTemplate),
 		EventSchemaVersion:   types.StringValue(wh.EventSchemaVersion),
+		SigningMode:          types.StringValue(wh.SigningMode),
 		IsEnabled:            types.BoolValue(wh.IsEnabled),
 		SecretDigest:         stringPointerValue(wh.SecretDigest),
 		SecretRotationActive: types.BoolValue(wh.SecretRotationActive),

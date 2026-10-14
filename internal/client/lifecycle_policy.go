@@ -11,6 +11,8 @@ import (
 type LifecyclePolicy struct {
 	ID                  string          `json:"id"`
 	RepositoryID        *string         `json:"repository_id"`
+	AppliesToAll        bool            `json:"applies_to_all"`
+	RepositoryIDs       []string        `json:"repository_ids"`
 	Name                string          `json:"name"`
 	Description         *string         `json:"description"`
 	Enabled             bool            `json:"enabled"`
@@ -28,25 +30,30 @@ type LifecyclePolicy struct {
 // (POST /admin/lifecycle). The API does not accept `enabled` on create (new
 // policies are always enabled); toggle it with a follow-up update.
 type CreateLifecyclePolicyRequest struct {
-	RepositoryID *string         `json:"repository_id,omitempty"`
-	Name         string          `json:"name"`
-	Description  *string         `json:"description,omitempty"`
-	PolicyType   string          `json:"policy_type"`
-	Config       json.RawMessage `json:"config"`
-	Priority     *int64          `json:"priority,omitempty"`
-	CronSchedule *string         `json:"cron_schedule,omitempty"`
+	RepositoryID  *string         `json:"repository_id,omitempty"`
+	AppliesToAll  bool            `json:"applies_to_all,omitempty"`
+	RepositoryIDs []string        `json:"repository_ids,omitempty"`
+	Name          string          `json:"name"`
+	Description   *string         `json:"description,omitempty"`
+	PolicyType    string          `json:"policy_type"`
+	Config        json.RawMessage `json:"config"`
+	Priority      *int64          `json:"priority,omitempty"`
+	CronSchedule  *string         `json:"cron_schedule,omitempty"`
 }
 
 // UpdateLifecyclePolicyRequest maps the API's UpdateLifecyclePolicyRequest
 // (PATCH /admin/lifecycle/{id}). The API applies a partial update: any omitted
-// field keeps its current value. repository_id and policy_type are immutable.
+// field keeps its current value; repository_ids replaces the assignments whole.
+// repository_id and policy_type are immutable.
 type UpdateLifecyclePolicyRequest struct {
-	Name         *string         `json:"name,omitempty"`
-	Description  *string         `json:"description,omitempty"`
-	Enabled      *bool           `json:"enabled,omitempty"`
-	Config       json.RawMessage `json:"config,omitempty"`
-	Priority     *int64          `json:"priority,omitempty"`
-	CronSchedule *string         `json:"cron_schedule,omitempty"`
+	AppliesToAll  *bool           `json:"applies_to_all,omitempty"`
+	RepositoryIDs *[]string       `json:"repository_ids,omitempty"`
+	Name          *string         `json:"name,omitempty"`
+	Description   *string         `json:"description,omitempty"`
+	Enabled       *bool           `json:"enabled,omitempty"`
+	Config        json.RawMessage `json:"config,omitempty"`
+	Priority      *int64          `json:"priority,omitempty"`
+	CronSchedule  *string         `json:"cron_schedule,omitempty"`
 }
 
 func (c *Client) CreateLifecyclePolicy(ctx context.Context, req CreateLifecyclePolicyRequest) (*LifecyclePolicy, error) {

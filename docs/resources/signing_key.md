@@ -48,7 +48,7 @@ resource "artifactkeeper_signing_key" "global" {
 
 ### Optional
 
-- `algorithm` (String) RSA key size: `rsa4096` (default) or `rsa2048`. Changing this forces a new key.
+- `algorithm` (String) Key algorithm: `rsa4096` (default), `rsa2048`, or `ed25519` (with `key_type = "gpg"` only, Artifact Keeper 1.11.0). Changing this forces a new key.
 - `key_type` (String) Key family: `rsa` (default) or `gpg`. Debian/RPM repositories sign metadata with OpenPGP and require `gpg`. Set the RSA key size via `algorithm`, not here, an RSA size variant passed as `key_type` is normalized to `rsa` by the server and causes a plan inconsistency. Changing this forces a new key.
 - `repository_id` (String) UUID of the repository this key belongs to. Omit for a global (instance-wide) key. Changing this forces a new key.
 - `uid_email` (String) OpenPGP user-ID email embedded in a `gpg` key. Changing this forces a new key.

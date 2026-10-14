@@ -51,6 +51,7 @@ resource "artifactkeeper_security_policy" "docker_release" {
 - `is_enabled` (Boolean) Whether the policy is active. Not settable at creation (the API enables new policies by default); a value set here is applied via a follow-up update.
 - `max_artifact_age_days` (Number) Maximum age in days for a promotable artifact. The API cannot clear this back to unset once written; remove the policy to reset it.
 - `min_staging_hours` (Number) Minimum hours an artifact must stay in staging before promotion. The API cannot clear this back to unset once written; remove the policy to reset it.
+- `predicates` (String) Format-specific and origin predicates as a JSON object (Artifact Keeper 1.11.0), e.g. `jsonencode({ origin = { allowed_kinds = ["hosted"] }, conda = { require_attestation = true } })`. Omit for none. Keys the server adds with empty defaults do not show as drift.
 - `repository_id` (String) UUID of the repository this policy applies to. Omit for a global policy. The API cannot re-target a policy, so changing this forces a new policy.
 - `require_signature` (Boolean) Require a valid signature on the artifact. Defaults to `false`.
 

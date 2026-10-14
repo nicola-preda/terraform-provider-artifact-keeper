@@ -19,6 +19,7 @@ type Webhook struct {
 	Headers              map[string]string `json:"headers"`
 	PayloadTemplate      string            `json:"payload_template"`
 	EventSchemaVersion   string            `json:"event_schema_version"`
+	SigningMode          string            `json:"signing_mode"`
 	SecretDigest         *string           `json:"secret_digest"`
 	SecretRotationActive bool              `json:"secret_rotation_active"`
 	LastTriggeredAt      *string           `json:"last_triggered_at"`
@@ -35,6 +36,7 @@ type CreateWebhookRequest struct {
 	Headers            map[string]string `json:"headers,omitempty"`
 	PayloadTemplate    *string           `json:"payload_template,omitempty"`
 	EventSchemaVersion *string           `json:"event_schema_version,omitempty"`
+	SigningMode        *string           `json:"signing_mode,omitempty"`
 }
 
 // webhookCreateResponse decodes the create body, which flattens the webhook

@@ -79,8 +79,8 @@ func (r *signingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"algorithm": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "RSA key size: `rsa4096` (default) or `rsa2048`. Changing this forces a new key.",
-				Validators:          []validator.String{stringvalidator.OneOf("rsa2048", "rsa4096")},
+				MarkdownDescription: "Key algorithm: `rsa4096` (default), `rsa2048`, or `ed25519` (with `key_type = \"gpg\"` only, Artifact Keeper 1.11.0). Changing this forces a new key.",
+				Validators:          []validator.String{stringvalidator.OneOf("rsa2048", "rsa4096", "ed25519")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"uid_name": schema.StringAttribute{

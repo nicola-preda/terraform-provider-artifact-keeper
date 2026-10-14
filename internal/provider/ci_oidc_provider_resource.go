@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -34,6 +37,8 @@ type ciOidcProviderResourceModel struct {
 	Audience     types.String `tfsdk:"audience"`
 	IsEnabled    types.Bool   `tfsdk:"is_enabled"`
 	MappingCount types.Int64  `tfsdk:"mapping_count"`
+	KeySource    types.String `tfsdk:"key_source"`
+	StaticJWKS   types.String `tfsdk:"static_jwks"`
 	CreatedAt    types.String `tfsdk:"created_at"`
 	UpdatedAt    types.String `tfsdk:"updated_at"`
 }
@@ -77,6 +82,17 @@ func (r *ciOidcProviderResource) Schema(_ context.Context, _ resource.SchemaRequ
 				MarkdownDescription: "Whether the provider is enabled. Defaults to `true`.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
+			"key_source": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "How signing keys are found (Artifact Keeper 1.11.0): `discovery` (default, the issuer's OIDC discovery document) or `static` (only `static_jwks`, never contacting the issuer, e.g. for an on-prem Kubernetes cluster).",
+				Validators:          []validator.String{stringvalidator.OneOf("discovery", "static")},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"static_jwks": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "The JWKS a `static` provider verifies against, as JSON (`{\"keys\": [...]}`, e.g. the output of `kubectl get --raw /openid/v1/jwks`). Required with `key_source = \"static\"`, refused otherwise. Public RSA or EC keys with unique `kid`s.",
+			},
 			"mapping_count": schema.Int64Attribute{
 				Computed:            true,
 				MarkdownDescription: "Number of identity mappings attached to this provider.",
@@ -107,7 +123,7 @@ func (r *ciOidcProviderResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, ciOidcToModel(cfg))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, ciOidcToModel(cfg, plan))...)
 }
 
 func (r *ciOidcProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -127,7 +143,7 @@ func (r *ciOidcProviderResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, ciOidcToModel(cfg))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, ciOidcToModel(cfg, state))...)
 }
 
 func (r *ciOidcProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -143,7 +159,7 @@ func (r *ciOidcProviderResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, ciOidcToModel(cfg))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, ciOidcToModel(cfg, plan))...)
 }
 
 func (r *ciOidcProviderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -175,11 +191,30 @@ func ciOidcRequestFromModel(m ciOidcProviderResourceModel) client.CiOidcProvider
 	if !m.IsEnabled.IsNull() && !m.IsEnabled.IsUnknown() {
 		req.IsEnabled = m.IsEnabled.ValueBoolPointer()
 	}
+	req.KeySource = optionalString(m.KeySource)
+	if v := optionalString(m.StaticJWKS); v != nil {
+		req.StaticJWKS = json.RawMessage(*v)
+	}
 	return req
 }
 
-func ciOidcToModel(c *client.CiOidcProvider) ciOidcProviderResourceModel {
+// ciOidcToModel keeps the configured JWKS encoding when it is semantically
+// equal to what the API returns.
+func ciOidcToModel(c *client.CiOidcProvider, prior ciOidcProviderResourceModel) ciOidcProviderResourceModel {
+	jwks := types.StringNull()
+	if len(c.StaticJWKS) > 0 && string(c.StaticJWKS) != "null" {
+		jwks = types.StringValue(string(c.StaticJWKS))
+		if !prior.StaticJWKS.IsNull() && !prior.StaticJWKS.IsUnknown() {
+			a, errA := canonicalJSON(prior.StaticJWKS.ValueString())
+			b, errB := canonicalJSON(string(c.StaticJWKS))
+			if errA == nil && errB == nil && a == b {
+				jwks = prior.StaticJWKS
+			}
+		}
+	}
 	return ciOidcProviderResourceModel{
+		KeySource:    types.StringValue(c.KeySource),
+		StaticJWKS:   jwks,
 		ID:           types.StringValue(c.ID),
 		Name:         types.StringValue(c.Name),
 		ProviderType: types.StringValue(c.ProviderType),

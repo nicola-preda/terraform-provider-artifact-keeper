@@ -88,7 +88,7 @@ func (r *repositorySecurityResource) Schema(_ context.Context, _ resource.Schema
 			"block_on_policy_violation": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Block serving/promotion of artifacts that violate the security policy.",
+				MarkdownDescription: "Enforce `severity_threshold` on the proxy scan gate. `false` (the default) does not mean \"don't block\": the gate then blocks on any finding. Use `proxy_scan_action = \"record_only\"` to scan without blocking.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"severity_threshold": schema.StringAttribute{
@@ -101,8 +101,8 @@ func (r *repositorySecurityResource) Schema(_ context.Context, _ resource.Schema
 			"proxy_scan_action": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Behavior when an inline proxy scan-on-fetch cannot run: `fail_open` (default, serve the artifact anyway) or `fail_closed` (refuse it).",
-				Validators:          []validator.String{stringvalidator.OneOf("fail_open", "fail_closed")},
+				MarkdownDescription: "How the inline proxy scan gate treats a pull: `fail_open` (default, serve the artifact while a scan cannot run), `fail_closed` (refuse it), or `record_only` (scan and record every pull but never block; overrides `block_on_policy_violation` and `severity_threshold`, requires Artifact Keeper 1.11.0).",
+				Validators:          []validator.String{stringvalidator.OneOf("fail_open", "fail_closed", "record_only")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{

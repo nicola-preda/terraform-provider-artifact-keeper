@@ -52,6 +52,7 @@ resource "artifactkeeper_ci_oidc_identity_mapping" "release_branches" {
 ### Optional
 
 - `allowed_repo_ids` (List of String) Optional list of repository UUIDs this mapping is restricted to. Omit for an unrestricted mapping.
+- `group_binding_ids` (List of String) Groups the mapping's service account is a member of, reconciled on every exchange (Artifact Keeper 1.11.0): the access lives on the mapping instead of in a separate group membership. Omit to make no claim; an empty list strips every membership.
 - `is_enabled` (Boolean) Whether the mapping is enabled. Defaults to `true`.
 - `priority` (Number) Evaluation priority; lower numbers are evaluated first. Defaults to `100`.
 

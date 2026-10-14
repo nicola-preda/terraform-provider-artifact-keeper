@@ -44,15 +44,17 @@ resource "artifactkeeper_lifecycle_policy" "keep_recent" {
 
 - `config` (String) Policy configuration as a JSON object, e.g. `jsonencode({ max_age_days = 90 })`. The required keys depend on `policy_type`. Use `jsonencode(...)` so the encoding matches the API's normalized form.
 - `name` (String) Human-readable policy name.
-- `policy_type` (String) Retention strategy: `max_age_days`, `max_versions`, `no_downloads_days`, `tag_pattern_keep`, `tag_pattern_delete`, or `size_quota_bytes`. Changing this forces a new policy.
+- `policy_type` (String) Retention strategy: `max_age_days`, `max_versions`, `no_downloads_days`, `tag_pattern_keep`, `tag_pattern_delete`, `size_quota_bytes`, or `composite` (several conditions, Artifact Keeper 1.11.0). Changing this forces a new policy.
 
 ### Optional
 
+- `applies_to_all` (Boolean) Apply to every current and future repository (Artifact Keeper 1.11.0). A global policy does not reach Remote repositories' proxy caches; assign those explicitly. Defaults to `false`.
 - `cron_schedule` (String) Optional cron expression controlling automatic execution. When omitted, the policy runs only when executed manually.
 - `description` (String) Free-form description of the policy.
 - `enabled` (Boolean) Whether the policy runs on the schedule / `execute-all` pass. Defaults to `true`.
 - `priority` (Number) Evaluation priority; lower numbers run first. Defaults to `0`.
-- `repository_id` (String) UUID of the repository this policy applies to. Omit for a global policy. The `max_versions` and `size_quota_bytes` policy types require a repository. Changing this forces a new policy.
+- `repository_id` (String) UUID of the single repository this policy applies to. Deprecated in Artifact Keeper 1.11.0 in favour of `repository_ids`, and since 1.11.0 omitting every scope makes the policy dormant, not global: set `applies_to_all` for that. Changing this forces a new policy.
+- `repository_ids` (Set of String) UUIDs of the repositories this policy is assigned to (Artifact Keeper 1.11.0). Cannot be combined with `applies_to_all`. With neither set the policy is dormant.
 
 ### Read-Only
 

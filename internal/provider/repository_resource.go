@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -17,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
@@ -27,6 +30,7 @@ var (
 	_ resource.Resource                = (*repositoryResource)(nil)
 	_ resource.ResourceWithConfigure   = (*repositoryResource)(nil)
 	_ resource.ResourceWithImportState = (*repositoryResource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*repositoryResource)(nil)
 )
 
 func NewRepositoryResource() resource.Resource {
@@ -38,43 +42,48 @@ type repositoryResource struct {
 }
 
 type repositoryResourceModel struct {
-	ID                        types.String `tfsdk:"id"`
-	Key                       types.String `tfsdk:"key"`
-	Name                      types.String `tfsdk:"name"`
-	Description               types.String `tfsdk:"description"`
-	Format                    types.String `tfsdk:"format"`
-	RepoType                  types.String `tfsdk:"repo_type"`
-	IsPublic                  types.Bool   `tfsdk:"is_public"`
-	AllowAnonymousAccess      types.Bool   `tfsdk:"allow_anonymous_access"`
-	StorageUsedBytes          types.Int64  `tfsdk:"storage_used_bytes"`
-	QuotaBytes                types.Int64  `tfsdk:"quota_bytes"`
-	UpstreamURL               types.String `tfsdk:"upstream_url"`
-	UpstreamAuthType          types.String `tfsdk:"upstream_auth_type"`
-	UpstreamAuthConfigured    types.Bool   `tfsdk:"upstream_auth_configured"`
-	CreatedAt                 types.String `tfsdk:"created_at"`
-	UpdatedAt                 types.String `tfsdk:"updated_at"`
-	Members                   types.List   `tfsdk:"members"`
-	PromotionOnly             types.Bool   `tfsdk:"promotion_only"`
-	VersioningEnabled         types.Bool   `tfsdk:"versioning_enabled"`
-	ProjectID                 types.String `tfsdk:"project_id"`
-	HasTrustedGpgKey          types.Bool   `tfsdk:"has_trusted_gpg_key"`
-	TrustedGpgKey             types.String `tfsdk:"trusted_gpg_key"`
-	CustomUserAgent           types.String `tfsdk:"custom_user_agent"`
-	StorageBackend            types.String `tfsdk:"storage_backend"`
-	FormatKey                 types.String `tfsdk:"format_key"`
-	IndexUpstreamURL          types.String `tfsdk:"index_upstream_url"`
-	PypiUpstreamIndexPath     types.String `tfsdk:"pypi_upstream_index_path"`
-	AptOrigin                 types.String `tfsdk:"apt_origin"`
-	AptLabel                  types.String `tfsdk:"apt_label"`
-	AptReleaseVersion         types.String `tfsdk:"apt_release_version"`
-	AptDescription            types.String `tfsdk:"apt_description"`
-	QuarantineEnabled         types.Bool   `tfsdk:"quarantine_enabled"`
-	QuarantineDurationMinutes types.Int64  `tfsdk:"quarantine_duration_minutes"`
-	CurationEnabled           types.Bool   `tfsdk:"curation_enabled"`
-	CurationDefaultAction     types.String `tfsdk:"curation_default_action"`
-	CurationAllowUnverified   types.Bool   `tfsdk:"curation_allow_unverified"`
-	NpmAllowedNamePatterns    types.List   `tfsdk:"npm_allowed_name_patterns"`
-	Debian                    types.Object `tfsdk:"debian"`
+	ID                           types.String `tfsdk:"id"`
+	Key                          types.String `tfsdk:"key"`
+	Name                         types.String `tfsdk:"name"`
+	Description                  types.String `tfsdk:"description"`
+	Format                       types.String `tfsdk:"format"`
+	RepoType                     types.String `tfsdk:"repo_type"`
+	IsPublic                     types.Bool   `tfsdk:"is_public"`
+	Visibility                   types.String `tfsdk:"visibility"`
+	AllowAnonymousAccess         types.Bool   `tfsdk:"allow_anonymous_access"`
+	StorageUsedBytes             types.Int64  `tfsdk:"storage_used_bytes"`
+	QuotaBytes                   types.Int64  `tfsdk:"quota_bytes"`
+	UpstreamURL                  types.String `tfsdk:"upstream_url"`
+	UpstreamAuthType             types.String `tfsdk:"upstream_auth_type"`
+	UpstreamAuthConfigured       types.Bool   `tfsdk:"upstream_auth_configured"`
+	CreatedAt                    types.String `tfsdk:"created_at"`
+	UpdatedAt                    types.String `tfsdk:"updated_at"`
+	Members                      types.List   `tfsdk:"members"`
+	PromotionOnly                types.Bool   `tfsdk:"promotion_only"`
+	VersioningEnabled            types.Bool   `tfsdk:"versioning_enabled"`
+	ProjectID                    types.String `tfsdk:"project_id"`
+	HasTrustedGpgKey             types.Bool   `tfsdk:"has_trusted_gpg_key"`
+	TrustedGpgKey                types.String `tfsdk:"trusted_gpg_key"`
+	RepodataDepth                types.Int64  `tfsdk:"repodata_depth"`
+	OciTrustedBearerRealms       types.List   `tfsdk:"oci_trusted_bearer_realms"`
+	NpmVirtualIsolateHostedNames types.Bool   `tfsdk:"npm_virtual_isolate_hosted_names"`
+	VirtualMetadataPartial       types.Bool   `tfsdk:"virtual_metadata_partial"`
+	CustomUserAgent              types.String `tfsdk:"custom_user_agent"`
+	StorageBackend               types.String `tfsdk:"storage_backend"`
+	FormatKey                    types.String `tfsdk:"format_key"`
+	IndexUpstreamURL             types.String `tfsdk:"index_upstream_url"`
+	PypiUpstreamIndexPath        types.String `tfsdk:"pypi_upstream_index_path"`
+	AptOrigin                    types.String `tfsdk:"apt_origin"`
+	AptLabel                     types.String `tfsdk:"apt_label"`
+	AptReleaseVersion            types.String `tfsdk:"apt_release_version"`
+	AptDescription               types.String `tfsdk:"apt_description"`
+	QuarantineEnabled            types.Bool   `tfsdk:"quarantine_enabled"`
+	QuarantineDurationMinutes    types.Int64  `tfsdk:"quarantine_duration_minutes"`
+	CurationEnabled              types.Bool   `tfsdk:"curation_enabled"`
+	CurationDefaultAction        types.String `tfsdk:"curation_default_action"`
+	CurationAllowUnverified      types.Bool   `tfsdk:"curation_allow_unverified"`
+	NpmAllowedNamePatterns       types.List   `tfsdk:"npm_allowed_name_patterns"`
+	Debian                       types.Object `tfsdk:"debian"`
 }
 
 // debianConfigModel maps the nested `debian` block (the Debian remote proxy
@@ -147,8 +156,16 @@ func (r *repositoryResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"is_public": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Whether anonymous (unauthenticated) users may download artifacts. Defaults to `false`.",
+				MarkdownDescription: "Whether anonymous (unauthenticated) users may download artifacts. Defaults to `false`. The legacy view of `visibility` (`true` is `public`); set one or the other.",
+				Validators:          []validator.Bool{boolvalidator.ConflictsWith(path.MatchRoot("visibility"))},
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"visibility": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Who may read the repository (Artifact Keeper 1.11.0): `public` (anyone, including anonymous), `internal` (any authenticated principal) or `private` (only principals holding a grant). Supersedes `is_public`, which cannot express `internal`.",
+				Validators:          []validator.String{stringvalidator.OneOf("public", "internal", "private")},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"allow_anonymous_access": schema.BoolAttribute{
 				Computed:            true,
@@ -228,6 +245,26 @@ func (r *repositoryResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Optional:            true,
 				Sensitive:           true,
 				MarkdownDescription: "ASCII-armored OpenPGP **public** key trusted to sign an RPM curation remote's `repomd.xml`. Write-only, the API never returns it (see `has_trusted_gpg_key`).",
+			},
+			"repodata_depth": schema.Int64Attribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Hosted RPM repositories: directory depth at which independent YUM/DNF metadata is generated (Artifact Keeper 1.11.0). `0` (default) is one `repodata/` at the root; `1` gives one per top-level directory, and so on. Changeable only while the repository is empty.",
+				Validators:          []validator.Int64{int64validator.Between(0, 1023)},
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
+			},
+			"oci_trusted_bearer_realms": schema.ListAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "Remote OCI repositories: cross-origin Bearer token realms trusted to receive the upstream credentials, each an exact `https://host[:port]` origin (Artifact Keeper 1.11.0). By default credentials only follow a realm on the upstream's own origin. Write-only in the API.",
+			},
+			"npm_virtual_isolate_hosted_names": schema.BoolAttribute{
+				Optional:            true,
+				MarkdownDescription: "Virtual npm repositories: a package name published to a hosted member never resolves from an upstream member (Artifact Keeper 1.11.0), closing dependency confusion. Write-only in the API.",
+			},
+			"virtual_metadata_partial": schema.BoolAttribute{
+				Optional:            true,
+				MarkdownDescription: "Virtual repositories: when a member's metadata cannot be fetched, serve the merge of the members that answered instead of failing with 502 (Artifact Keeper 1.11.0). Write-only in the API.",
 			},
 			"has_trusted_gpg_key": schema.BoolAttribute{
 				Computed:            true,
@@ -384,6 +421,41 @@ func (r *repositoryResource) Configure(_ context.Context, req resource.Configure
 	r.client = c
 }
 
+// ModifyPlan keeps `is_public`, `allow_anonymous_access` and `visibility`
+// consistent: they are one stored value, so changing one leaves the others
+// unknown until the API answers.
+func (r *repositoryResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+	var plan, state repositoryResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !plan.Visibility.IsUnknown() && !plan.Visibility.Equal(state.Visibility) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("is_public"), types.BoolUnknown())...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("allow_anonymous_access"), types.BoolUnknown())...)
+	}
+	if !plan.IsPublic.IsUnknown() && !plan.IsPublic.Equal(state.IsPublic) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("visibility"), types.StringUnknown())...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("allow_anonymous_access"), types.BoolUnknown())...)
+	}
+}
+
+// configuredVisibility returns `visibility` only when the practitioner set it,
+// never a value carried over from state: sending it with a stale `is_public`
+// is a contradiction the API rejects.
+func configuredVisibility(ctx context.Context, cfg tfsdk.Config, diags *diag.Diagnostics) *string {
+	var v types.String
+	diags.Append(cfg.GetAttribute(ctx, path.Root("visibility"), &v)...)
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+	return v.ValueStringPointer()
+}
+
 func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan repositoryResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -400,7 +472,9 @@ func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequ
 	if !plan.Description.IsNull() {
 		createReq.Description = plan.Description.ValueStringPointer()
 	}
-	if !plan.IsPublic.IsNull() && !plan.IsPublic.IsUnknown() {
+	if v := configuredVisibility(ctx, req.Config, &resp.Diagnostics); v != nil {
+		createReq.Visibility = v
+	} else if !plan.IsPublic.IsNull() && !plan.IsPublic.IsUnknown() {
 		createReq.IsPublic = plan.IsPublic.ValueBoolPointer()
 	}
 	if !plan.UpstreamURL.IsNull() {
@@ -421,6 +495,11 @@ func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequ
 	if !plan.CustomUserAgent.IsNull() {
 		createReq.CustomUserAgent = plan.CustomUserAgent.ValueStringPointer()
 	}
+	createReq.RepodataDepth = optionalInt64(plan.RepodataDepth)
+	createReq.NpmVirtualIsolateHostedNames = optionalBool(plan.NpmVirtualIsolateHostedNames)
+	realms, d := listToStringSlice(ctx, plan.OciTrustedBearerRealms)
+	resp.Diagnostics.Append(d...)
+	createReq.OciTrustedBearerRealms = realms
 	if !plan.TrustedGpgKey.IsNull() {
 		createReq.TrustedGpgKey = plan.TrustedGpgKey.ValueStringPointer()
 	}
@@ -574,7 +653,9 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 	if !plan.Description.IsNull() {
 		updateReq.Description = plan.Description.ValueStringPointer()
 	}
-	if !plan.IsPublic.IsNull() && !plan.IsPublic.IsUnknown() {
+	if v := configuredVisibility(ctx, req.Config, &resp.Diagnostics); v != nil {
+		updateReq.Visibility = v
+	} else if !plan.IsPublic.IsNull() && !plan.IsPublic.IsUnknown() {
 		updateReq.IsPublic = plan.IsPublic.ValueBoolPointer()
 	}
 	if !plan.QuotaBytes.IsNull() {
@@ -592,6 +673,17 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 	if !plan.CustomUserAgent.IsNull() {
 		updateReq.CustomUserAgent = plan.CustomUserAgent.ValueStringPointer()
 	}
+	// Only on change: the depth is refused once an RPM repository holds packages.
+	var priorDepth types.Int64
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("repodata_depth"), &priorDepth)...)
+	if !plan.RepodataDepth.Equal(priorDepth) {
+		updateReq.RepodataDepth = optionalInt64(plan.RepodataDepth)
+	}
+	updateReq.NpmVirtualIsolateHostedNames = optionalBool(plan.NpmVirtualIsolateHostedNames)
+	updateReq.VirtualMetadataPartial = optionalBool(plan.VirtualMetadataPartial)
+	realms, d := listToStringSlice(ctx, plan.OciTrustedBearerRealms)
+	resp.Diagnostics.Append(d...)
+	updateReq.OciTrustedBearerRealms = realms
 	if !plan.TrustedGpgKey.IsNull() {
 		updateReq.TrustedGpgKey = plan.TrustedGpgKey.ValueStringPointer()
 	}
@@ -712,6 +804,7 @@ func repositoryToModel(ctx context.Context, repo *client.Repository) (repository
 		Format:                    types.StringValue(repo.Format),
 		RepoType:                  types.StringValue(repo.RepoType),
 		IsPublic:                  types.BoolValue(repo.IsPublic),
+		Visibility:                types.StringValue(repo.Visibility),
 		AllowAnonymousAccess:      types.BoolValue(repo.AllowAnonymousAccess),
 		StorageUsedBytes:          types.Int64Value(repo.StorageUsedBytes),
 		QuotaBytes:                int64PointerValue(repo.QuotaBytes),
@@ -726,6 +819,7 @@ func repositoryToModel(ctx context.Context, repo *client.Repository) (repository
 		ProjectID:                 stringPointerValue(repo.ProjectID),
 		HasTrustedGpgKey:          types.BoolValue(repo.HasTrustedGpgKey),
 		CustomUserAgent:           stringPointerValue(repo.CustomUserAgent),
+		RepodataDepth:             int64PointerValue(repo.RepodataDepth),
 		AptOrigin:                 stringPointerValue(repo.AptOrigin),
 		AptLabel:                  stringPointerValue(repo.AptLabel),
 		AptReleaseVersion:         stringPointerValue(repo.AptReleaseVersion),
@@ -768,6 +862,11 @@ func repoPostCreateUpdate(plan repositoryResourceModel) (client.UpdateRepository
 	}
 	if !plan.CurationDefaultAction.IsNull() && !plan.CurationDefaultAction.IsUnknown() {
 		req.CurationDefaultAction = plan.CurationDefaultAction.ValueStringPointer()
+		set = true
+	}
+	// The create request has no virtual_metadata_partial.
+	if v := optionalBool(plan.VirtualMetadataPartial); v != nil {
+		req.VirtualMetadataPartial = v
 		set = true
 	}
 	return req, set
@@ -849,6 +948,9 @@ func debianConfigFromObject(ctx context.Context, o types.Object) (*client.Debian
 // by the API) from src to dst, so Read keeps prior state and Create/Update the plan.
 func applyWriteOnlyRepoFields(dst *repositoryResourceModel, src repositoryResourceModel) {
 	dst.TrustedGpgKey = src.TrustedGpgKey
+	dst.OciTrustedBearerRealms = src.OciTrustedBearerRealms
+	dst.NpmVirtualIsolateHostedNames = src.NpmVirtualIsolateHostedNames
+	dst.VirtualMetadataPartial = src.VirtualMetadataPartial
 	dst.StorageBackend = src.StorageBackend
 	dst.FormatKey = src.FormatKey
 	dst.IndexUpstreamURL = src.IndexUpstreamURL

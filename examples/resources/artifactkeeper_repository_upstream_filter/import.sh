@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_upstream_filter.downloads downloads-remote

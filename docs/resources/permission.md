@@ -31,9 +31,13 @@ resource "artifactkeeper_permission" "platform_docker" {
 
 - `actions` (List of String) Actions: `read`, `write`, `delete`, `admin`.
 - `principal_id` (String) UUID of the principal.
-- `principal_type` (String) Principal kind: `user`, `group`, or `service_account`. The principal must already exist; the server rejects a grant to an unknown id.
+- `principal_type` (String) Principal kind: `user`, `group`, `service_account`, or `anonymous` (every unauthenticated caller, Artifact Keeper 1.11.0; use `principal_id = "00000000-0000-0000-0000-000000000000"` and only `read` on a repository or project). The principal must already exist; the server rejects a grant to an unknown id.
 - `target_id` (String) UUID of the target resource.
 - `target_type` (String) `repository`, `group`, `artifact`, or `system`.
+
+### Optional
+
+- `allowed_cidrs` (List of String) CIDR ranges (IPv4 or IPv6) the client IP must fall inside for the rule to apply (Artifact Keeper 1.11.0). Omit for no IP restriction; an empty list is rejected.
 
 ### Read-Only
 

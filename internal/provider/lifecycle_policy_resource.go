@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -34,6 +37,8 @@ type lifecyclePolicyResource struct {
 type lifecyclePolicyResourceModel struct {
 	ID                  types.String `tfsdk:"id"`
 	RepositoryID        types.String `tfsdk:"repository_id"`
+	AppliesToAll        types.Bool   `tfsdk:"applies_to_all"`
+	RepositoryIDs       types.Set    `tfsdk:"repository_ids"`
 	Name                types.String `tfsdk:"name"`
 	Description         types.String `tfsdk:"description"`
 	Enabled             types.Bool   `tfsdk:"enabled"`
@@ -62,8 +67,23 @@ func (r *lifecyclePolicyResource) Schema(_ context.Context, _ resource.SchemaReq
 			},
 			"repository_id": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "UUID of the repository this policy applies to. Omit for a global policy. The `max_versions` and `size_quota_bytes` policy types require a repository. Changing this forces a new policy.",
+				MarkdownDescription: "UUID of the single repository this policy applies to. Deprecated in Artifact Keeper 1.11.0 in favour of `repository_ids`, and since 1.11.0 omitting every scope makes the policy dormant, not global: set `applies_to_all` for that. Changing this forces a new policy.",
+				Validators:          []validator.String{stringvalidator.ConflictsWith(path.MatchRoot("repository_ids"), path.MatchRoot("applies_to_all"))},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			"applies_to_all": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Apply to every current and future repository (Artifact Keeper 1.11.0). A global policy does not reach Remote repositories' proxy caches; assign those explicitly. Defaults to `false`.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"repository_ids": schema.SetAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "UUIDs of the repositories this policy is assigned to (Artifact Keeper 1.11.0). Cannot be combined with `applies_to_all`. With neither set the policy is dormant.",
+				Validators:          []validator.Set{setvalidator.ConflictsWith(path.MatchRoot("applies_to_all"))},
+				PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
@@ -81,7 +101,7 @@ func (r *lifecyclePolicyResource) Schema(_ context.Context, _ resource.SchemaReq
 			},
 			"policy_type": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Retention strategy: `max_age_days`, `max_versions`, `no_downloads_days`, `tag_pattern_keep`, `tag_pattern_delete`, or `size_quota_bytes`. Changing this forces a new policy.",
+				MarkdownDescription: "Retention strategy: `max_age_days`, `max_versions`, `no_downloads_days`, `tag_pattern_keep`, `tag_pattern_delete`, `size_quota_bytes`, or `composite` (several conditions, Artifact Keeper 1.11.0). Changing this forces a new policy.",
 				Validators: []validator.String{stringvalidator.OneOf(
 					"max_age_days",
 					"max_versions",
@@ -89,6 +109,7 @@ func (r *lifecyclePolicyResource) Schema(_ context.Context, _ resource.SchemaReq
 					"tag_pattern_keep",
 					"tag_pattern_delete",
 					"size_quota_bytes",
+					"composite",
 				)},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -146,6 +167,12 @@ func (r *lifecyclePolicyResource) Create(ctx context.Context, req resource.Creat
 	if !plan.RepositoryID.IsNull() {
 		createReq.RepositoryID = plan.RepositoryID.ValueStringPointer()
 	}
+	if v := optionalBool(plan.AppliesToAll); v != nil {
+		createReq.AppliesToAll = *v
+	}
+	repoIDs, d := setToStringSlice(ctx, plan.RepositoryIDs)
+	resp.Diagnostics.Append(d...)
+	createReq.RepositoryIDs = repoIDs
 	if !plan.Description.IsNull() {
 		createReq.Description = plan.Description.ValueStringPointer()
 	}
@@ -174,7 +201,8 @@ func (r *lifecyclePolicyResource) Create(ctx context.Context, req resource.Creat
 		}
 	}
 
-	state := lifecyclePolicyToModel(policy)
+	state, d := lifecyclePolicyToModel(ctx, policy)
+	resp.Diagnostics.Append(d...)
 	state.Config = plan.Config // preserve the configured JSON encoding verbatim
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -196,7 +224,8 @@ func (r *lifecyclePolicyResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	refreshed := lifecyclePolicyToModel(policy)
+	refreshed, d := lifecyclePolicyToModel(ctx, policy)
+	resp.Diagnostics.Append(d...)
 	// Keep the configured JSON encoding when it is semantically equal to what the
 	// API returns, so cosmetic differences (whitespace, key order) don't surface
 	// as perpetual diffs. Only overwrite it when the config genuinely drifted.
@@ -234,6 +263,16 @@ func (r *lifecyclePolicyResource) Update(ctx context.Context, req resource.Updat
 	if !plan.Enabled.IsNull() && !plan.Enabled.IsUnknown() {
 		updateReq.Enabled = plan.Enabled.ValueBoolPointer()
 	}
+	updateReq.AppliesToAll = optionalBool(plan.AppliesToAll)
+	// A singular repository_id is immutable and owns the assignment itself.
+	if plan.RepositoryID.IsNull() && !plan.RepositoryIDs.IsNull() && !plan.RepositoryIDs.IsUnknown() {
+		repoIDs, d := setToStringSlice(ctx, plan.RepositoryIDs)
+		resp.Diagnostics.Append(d...)
+		if repoIDs == nil {
+			repoIDs = []string{}
+		}
+		updateReq.RepositoryIDs = &repoIDs
+	}
 	if !plan.Priority.IsNull() && !plan.Priority.IsUnknown() {
 		updateReq.Priority = plan.Priority.ValueInt64Pointer()
 	}
@@ -247,7 +286,8 @@ func (r *lifecyclePolicyResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	state := lifecyclePolicyToModel(policy)
+	state, d := lifecyclePolicyToModel(ctx, policy)
+	resp.Diagnostics.Append(d...)
 	state.Config = plan.Config // preserve the configured JSON encoding verbatim
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -267,10 +307,17 @@ func (r *lifecyclePolicyResource) ImportState(ctx context.Context, req resource.
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func lifecyclePolicyToModel(p *client.LifecyclePolicy) lifecyclePolicyResourceModel {
+func lifecyclePolicyToModel(ctx context.Context, p *client.LifecyclePolicy) (lifecyclePolicyResourceModel, diag.Diagnostics) {
+	repoIDs := p.RepositoryIDs
+	if repoIDs == nil {
+		repoIDs = []string{}
+	}
+	ids, d := types.SetValueFrom(ctx, types.StringType, repoIDs)
 	return lifecyclePolicyResourceModel{
 		ID:                  types.StringValue(p.ID),
 		RepositoryID:        stringPointerValue(p.RepositoryID),
+		AppliesToAll:        types.BoolValue(p.AppliesToAll),
+		RepositoryIDs:       ids,
 		Name:                types.StringValue(p.Name),
 		Description:         stringPointerValue(p.Description),
 		Enabled:             types.BoolValue(p.Enabled),
@@ -282,5 +329,5 @@ func lifecyclePolicyToModel(p *client.LifecyclePolicy) lifecyclePolicyResourceMo
 		CronSchedule:        stringPointerValue(p.CronSchedule),
 		CreatedAt:           types.StringValue(p.CreatedAt),
 		UpdatedAt:           types.StringValue(p.UpdatedAt),
-	}
+	}, d
 }

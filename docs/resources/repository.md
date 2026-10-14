@@ -81,19 +81,24 @@ resource "artifactkeeper_repository" "debian_proxy" {
 - `description` (String) Free-form description of the repository.
 - `format_key` (String) Custom format key for a WASM plugin format handler (e.g. `rpm-custom`). Changing this forces a new repository.
 - `index_upstream_url` (String) Separate index host for Cargo registries that split index and downloads (e.g. `https://index.crates.io`). Write-only in the API.
-- `is_public` (Boolean) Whether anonymous (unauthenticated) users may download artifacts. Defaults to `false`.
+- `is_public` (Boolean) Whether anonymous (unauthenticated) users may download artifacts. Defaults to `false`. The legacy view of `visibility` (`true` is `public`); set one or the other.
 - `members` (List of String) For `virtual` repositories: ordered list of member repository keys to aggregate. List order sets resolution priority (first = highest). Managed authoritatively when set; omit to leave membership unmanaged. Not valid for non-virtual repositories.
 - `npm_allowed_name_patterns` (List of String) Allowed npm full-name glob patterns (`*`/`?`) for an npm `remote` repository, e.g. `@acme/*` or `internal-*`. Additive to the scope allow-list managed by `artifactkeeper_repository_npm_scope_policy`.
+- `npm_virtual_isolate_hosted_names` (Boolean) Virtual npm repositories: a package name published to a hosted member never resolves from an upstream member (Artifact Keeper 1.11.0), closing dependency confusion. Write-only in the API.
+- `oci_trusted_bearer_realms` (List of String) Remote OCI repositories: cross-origin Bearer token realms trusted to receive the upstream credentials, each an exact `https://host[:port]` origin (Artifact Keeper 1.11.0). By default credentials only follow a realm on the upstream's own origin. Write-only in the API.
 - `project_id` (String) UUID of a project to assign this repository to; project-level grants are inherited. Omit to leave unassigned.
 - `promotion_only` (Boolean) When true, direct uploads are rejected, artifacts must arrive via promotion. Admin-only. Defaults to `false`.
 - `pypi_upstream_index_path` (String) PyPI simple-index prefix override for non-PEP 503 upstreams: `"simple"` (default), `""` for a flat CDN, or a custom prefix. Write-only in the API.
 - `quarantine_duration_minutes` (Number) Quarantine hold duration in minutes. Only meaningful when `quarantine_enabled` is true.
 - `quarantine_enabled` (Boolean) Hold newly uploaded artifacts in quarantine until they are scanned. Defaults to the instance-wide setting when unset.
 - `quota_bytes` (Number) Storage quota in bytes. Omit for unlimited.
+- `repodata_depth` (Number) Hosted RPM repositories: directory depth at which independent YUM/DNF metadata is generated (Artifact Keeper 1.11.0). `0` (default) is one `repodata/` at the root; `1` gives one per top-level directory, and so on. Changeable only while the repository is empty.
 - `storage_backend` (String) Override the storage backend for this repository. Non-admins may only use the default. Changing this forces a new repository.
 - `trusted_gpg_key` (String, Sensitive) ASCII-armored OpenPGP **public** key trusted to sign an RPM curation remote's `repomd.xml`. Write-only, the API never returns it (see `has_trusted_gpg_key`).
 - `upstream_url` (String) Upstream registry URL for `remote` (pull-through cache) repositories. Changing this forces a new repository.
 - `versioning_enabled` (Boolean) Enable first-class artifact versioning (Generic/Mlmodel repos append immutable revisions instead of overwriting). Defaults to `false`.
+- `virtual_metadata_partial` (Boolean) Virtual repositories: when a member's metadata cannot be fetched, serve the merge of the members that answered instead of failing with 502 (Artifact Keeper 1.11.0). Write-only in the API.
+- `visibility` (String) Who may read the repository (Artifact Keeper 1.11.0): `public` (anyone, including anonymous), `internal` (any authenticated principal) or `private` (only principals holding a grant). Supersedes `is_public`, which cannot express `internal`.
 
 ### Read-Only
 

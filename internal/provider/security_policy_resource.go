@@ -39,6 +39,7 @@ type securityPolicyResourceModel struct {
 	MinStagingHours    types.Int64  `tfsdk:"min_staging_hours"`
 	MaxArtifactAgeDays types.Int64  `tfsdk:"max_artifact_age_days"`
 	RequireSignature   types.Bool   `tfsdk:"require_signature"`
+	Predicates         types.String `tfsdk:"predicates"`
 	CreatedAt          types.String `tfsdk:"created_at"`
 	UpdatedAt          types.String `tfsdk:"updated_at"`
 }
@@ -100,6 +101,12 @@ func (r *securityPolicyResource) Schema(_ context.Context, _ resource.SchemaRequ
 				MarkdownDescription: "Require a valid signature on the artifact. Defaults to `false`.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
+			"predicates": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Format-specific and origin predicates as a JSON object (Artifact Keeper 1.11.0), e.g. `jsonencode({ origin = { allowed_kinds = [\"hosted\"] }, conda = { require_attestation = true } })`. Omit for none. Keys the server adds with empty defaults do not show as drift.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
 			"created_at": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "RFC 3339 creation timestamp.",
@@ -125,6 +132,7 @@ func (r *securityPolicyResource) Create(ctx context.Context, req resource.Create
 	}
 
 	createReq := client.CreateSecurityPolicyRequest{
+		Predicates:   predicatesJSON(plan.Predicates),
 		Name:         plan.Name.ValueString(),
 		RepositoryID: optionalString(plan.RepositoryID),
 		MaxSeverity:  plan.MaxSeverity.ValueString(),
@@ -161,7 +169,7 @@ func (r *securityPolicyResource) Create(ctx context.Context, req resource.Create
 		}
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, securityPolicyToModel(p))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, securityPolicyToModel(p, plan))...)
 }
 
 func (r *securityPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -181,7 +189,7 @@ func (r *securityPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, securityPolicyToModel(p))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, securityPolicyToModel(p, state))...)
 }
 
 func (r *securityPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -192,6 +200,7 @@ func (r *securityPolicyResource) Update(ctx context.Context, req resource.Update
 	}
 
 	updateReq := client.UpdateSecurityPolicyRequest{
+		Predicates:       predicatesJSON(plan.Predicates),
 		Name:             plan.Name.ValueStringPointer(),
 		MaxSeverity:      plan.MaxSeverity.ValueStringPointer(),
 		BlockUnscanned:   plan.BlockUnscanned.ValueBoolPointer(),
@@ -212,7 +221,7 @@ func (r *securityPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, securityPolicyToModel(p))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, securityPolicyToModel(p, plan))...)
 }
 
 func (r *securityPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -230,8 +239,9 @@ func (r *securityPolicyResource) ImportState(ctx context.Context, req resource.I
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func securityPolicyToModel(p *client.SecurityPolicy) securityPolicyResourceModel {
+func securityPolicyToModel(p *client.SecurityPolicy, prior securityPolicyResourceModel) securityPolicyResourceModel {
 	return securityPolicyResourceModel{
+		Predicates:         jsonKeepPrior(prior.Predicates, p.Predicates),
 		ID:                 types.StringValue(p.ID),
 		Name:               types.StringValue(p.Name),
 		RepositoryID:       stringPointerValue(p.RepositoryID),

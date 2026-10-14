@@ -5,6 +5,49 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [1.11.0] - 2026-10-14
+
+Validated against Artifact Keeper 1.11.0. No route moved and no field the provider reads or
+sends was removed or retyped: 516 documented routes against 470 at 1.10.2, 46 added, none
+removed, and the apparent removals in the struct diff are relaxations (`is_public` and
+`trusted_gpg_key` became optional on the repository requests). Every declarative write the
+backend and the web UI offer is now modelled; the rest are imperative actions, workflow
+decisions or data-plane writes (see MAINTAINING.md).
+
+### Changed
+
+- **`artifactkeeper_lifecycle_policy` scope semantics follow 1.11.0.** A policy with no
+  repository is now dormant, not global (migration 233). New `applies_to_all` and
+  `repository_ids` express the two scopes; `repository_id` keeps working and is deprecated
+  upstream. Upgrade note from the backend: stop every old replica and the lifecycle
+  scheduler before migration 233 runs, and expect a policy assigned to a Remote repository
+  to start reclaiming its proxy cache.
+- **`artifactkeeper_user.password` changes in place** through `POST /users/{id}/password`,
+  as an admin does in the UI. It used to force a new user, losing its memberships.
+- **`artifactkeeper_ci_oidc_identity_mapping.allowed_repo_ids`** can now be removed from
+  config to lift the restriction: 1.11.0 accepts `null` on update, and the provider sends it.
+- `artifactkeeper_repository_security.block_on_policy_violation` documents what `false`
+  really does upstream (block on any finding).
+
+### Added
+
+- `artifactkeeper_repository_security.proxy_scan_action = "record_only"`: scan and record
+  every proxied pull, never block (#3645).
+- `artifactkeeper_repository.visibility` (`public`, `internal`, `private`), which
+  supersedes `is_public`; plus `repodata_depth`, `oci_trusted_bearer_realms`,
+  `npm_virtual_isolate_hosted_names` and `virtual_metadata_partial`.
+- `artifactkeeper_permission.allowed_cidrs` and `principal_type = "anonymous"`, for
+  IP-restricted anonymous downloads (#1849).
+- `artifactkeeper_webhook.signing_mode` (`hmac`, `asymmetric`, `both`).
+- `artifactkeeper_signing_key.algorithm = "ed25519"` for `gpg` keys.
+- `artifactkeeper_security_policy.predicates`, the origin and conda policy predicates.
+- `artifactkeeper_ci_oidc_provider.key_source` / `static_jwks` and
+  `artifactkeeper_ci_oidc_identity_mapping.group_binding_ids`.
+- `artifactkeeper_lifecycle_policy.policy_type = "composite"`.
+- New resources: `artifactkeeper_runtime_settings` (guest access without a restart),
+  `artifactkeeper_system_banner`, `artifactkeeper_repository_upstream_filter` and
+  `artifactkeeper_repository_allowlist` (virtual conda channels).
+
 ## [1.10.2] - 2026-10-05
 
 Validated against Artifact Keeper 1.10.2, a token-scoping security release. No route moved

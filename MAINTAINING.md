@@ -37,9 +37,32 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.10.2** (2026-10-05) |
-| Provider changes needed | `webhook.headers` kept from state (values now read back as `***`), new `api_token.repo_selector`, `write:findings` scope |
-| Acceptance suite | run live against the 1.10.2 backend image (2026-10-05): 15 pass |
+| Validated against | **Artifact Keeper 1.11.0** (2026-10-14) |
+| Provider changes needed | lifecycle scope (`applies_to_all`, `repository_ids`), `record_only`, repository `visibility`, permission `allowed_cidrs`/`anonymous`, four new resources, in-place user password |
+| Acceptance suite | not yet run live against 1.11.0; `TestAccV111Surface` covers the new surface |
+
+1.11.0 moved no route and removed no field the provider uses. **516 documented routes against
+470 at 1.10.2**, 46 added and none removed. The struct diff's six apparent removals are
+relaxations or extractor noise: `CreateRepositoryRequest.is_public` and
+`UpdateRepositoryRequest.trusted_gpg_key` became optional, `CreateKeyRequest` lost two
+inline comments, and `UpdateCiOidcMappingRequest.allowed_repo_ids` became
+`Option<Option<…>>` so `null` now clears it.
+
+One semantic break with no schema change: **a lifecycle policy without a repository is
+dormant from migration 233 on, not global.** `applies_to_all` is the new way to say global,
+and a global policy deliberately does not reach Remote proxy caches. A policy assigned to a
+Remote now reclaims its proxy cache (`no_downloads_days`, `max_age_days` and friends key on
+cache time); types that cannot reclaim anything there are refused with 422.
+
+Coverage was re-measured on both axes, scripted as in the 1.8.0 pass. Backend: 277 write
+routes, 170 not called by the provider, every one bucketed below. Web UI (`proton-1.10.1`,
+the latest web release): 358 SDK functions, 240 used, plus the hand-written `apiFetch`
+calls, 196 writes, 112 not called by the provider, all inside the same buckets. Declarative
+writes that were uncovered and are now modelled: guest access (`runtime_settings`),
+maintenance banners (`system_banner`), the Remote path filter
+(`repository_upstream_filter`), the virtual conda allowlist (`repository_allowlist`),
+lifecycle assignments (as the whole-set `repository_ids`), the admin password set (now
+in place on `user`), and the new fields listed in the CHANGELOG.
 
 1.10.2 moved no route and removed no field. What it changed is strictness: the five
 token-mint requests are `deny_unknown_fields`, so sending a field the backend lacks is now a
@@ -209,7 +232,7 @@ that handler on a bump.
 ## How to re-check drift on a version bump
 
 When the backend moves to a new tag (say `v1.11.0`), verify the provider before
-declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.10.2`).
+declaring compatibility. `PREV` = the tag in "Validated against" above (`v1.11.0`).
 
 Fastest first pass, and the one that actually caught both the 1.7.1 and 1.7.4 deltas: diff every
 serializable struct between the two tags, rather than reading handlers one by one. Extract
@@ -378,7 +401,7 @@ For a big jump, fan the per-row diffs out across parallel workers.
 
 ## Capability gaps (backend offers, provider doesn't model)
 
-Not bugs; scope decisions. Current as of v1.10.2 (**52 resources + 4 data sources**).
+Not bugs; scope decisions. Current as of v1.11.0 (**56 resources + 4 data sources**).
 The backend has ~90 handler modules; most are package wire protocols or imperative
 actions that aren't IaC. Every whole-object endpoint is modelled, the per-repository
 sub-config endpoints have `repository_*` resources (`repository_security`,
@@ -460,6 +483,19 @@ settable is unaccounted for.
 One false positive to know about when redoing this: the extractor reads Rust field names, so
 `InstallFromGitRequest.git_ref` looks missing when the provider does send it — the field is
 `#[serde(rename = "ref")]`. Check the serde attribute before believing a hit.
+
+**Closed in v1.11.0:** `runtime_settings`, `system_banner`, `repository_upstream_filter`,
+`repository_allowlist`; lifecycle `applies_to_all`/`repository_ids`/`composite`; repository
+`visibility`, `repodata_depth`, `oci_trusted_bearer_realms`,
+`npm_virtual_isolate_hosted_names`, `virtual_metadata_partial`; permission `allowed_cidrs`
+and the `anonymous` principal; webhook `signing_mode`; GPG `ed25519` keys; security policy
+`predicates`; CI OIDC `key_source`/`static_jwks`/`group_binding_ids`; and the in-place admin
+password change the UI offers, which `user` used to model as a replacement. Still
+imperative and out of scope: approvals and exception reviews, quarantine and curation
+decisions on individual packages, backup/GC/scrub/reindex/lifecycle runs, trash restore,
+bundle export/import, migration start/pause/resume, signing key rotate/revoke, webhook
+test/redeliver/rotate-secret, finding acknowledgements, uploads and builds. The UI's
+rate-limit exemption page still calls endpoints the backend does not have.
 
 **Closed in v1.10.1:** `token_policy` (the only declarative endpoint 1.10 adds), the
 `aws_ecr`/`aws_codeartifact` auth types and their `aws` settings block on
@@ -565,7 +601,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.10.2 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.11.0 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh

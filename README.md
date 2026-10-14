@@ -7,19 +7,19 @@ can change in the UI, is a Terraform resource.
 Attribute names match the API's JSON fields one-to-one (`repo_type`, `is_public`, …), so
 there's nothing to translate in your head.
 
-Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.10.2** (see
+Requires Terraform 1.5.7+ or OpenTofu. Tracks Artifact Keeper **1.11.0** (see
 [MAINTAINING.md](MAINTAINING.md) for the coverage map and per-release upgrade checks).
 
 ## What you can manage
 
-52 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
+56 resources and 4 data sources. Each row is a job you'd otherwise do by clicking through
 the admin UI; [`docs/`](docs/) has the full schema for every resource.
 
 | What you want to do | Resources |
 |---|---|
 | Create hosted, proxy and virtual repositories, and set quotas, anonymous access, versioning, project ownership | `repository` |
-| Tune a repository's proxy behaviour: cache TTL, upstream credentials, egress proxy, path rewrites, npm scope limits, PyPI tracks | `repository_cache_ttl`, `repository_upstream_auth`, `repository_egress_proxy`, `repository_routing_rules`, `repository_npm_scope_policy`, `repository_pypi_track` |
-| Gate what enters a repository: vulnerability scanning, age-based holds on fresh upstream releases, curation rules | `repository_security`, `age_gate`, `curation_rule` |
+| Tune a repository's proxy behaviour: cache TTL, upstream credentials, egress proxy, path rewrites, npm scope limits, PyPI tracks | `repository_cache_ttl`, `repository_upstream_auth`, `repository_egress_proxy`, `repository_routing_rules`, `repository_upstream_filter`, `repository_npm_scope_policy`, `repository_pypi_track` |
+| Gate what enters a repository: vulnerability scanning, age-based holds on fresh upstream releases, curation rules | `repository_security`, `age_gate`, `curation_rule`, `repository_allowlist` |
 | Expire and clean up artifacts on a schedule | `lifecycle_policy` |
 | Promote artifacts between staging and release repositories, with rules and quality bars | `promotion_rule`, `repository_release_target`, `quality_gate`, `security_policy`, `license_policy` |
 | Sign metadata and artifacts, and manage the signing keys | `signing_key`, `repository_signing_config` |
@@ -29,7 +29,8 @@ the admin UI; [`docs/`](docs/) has the full schema for every resource.
 | Replicate between instances and target peers by label | `peer`, `peer_repository_subscription`, `peer_instance_label`, `peer_network_profile`, `sync_policy`, `remote_instance` |
 | Import from a legacy registry (Nexus, Artifactory) | `migration_source`, `migration_job` |
 | Notify on events | `webhook`, `email_subscription` |
-| Set instance-wide behaviour: retention, upload limits, anonymous downloads, telemetry, which package formats are enabled, plugins | `system_settings`, `telemetry_settings`, `format_handler`, `plugin` |
+| Set instance-wide behaviour: retention, upload limits, anonymous downloads, telemetry, which package formats are enabled, plugins | `system_settings`, `runtime_settings`, `telemetry_settings`, `format_handler`, `plugin` |
+| Announce maintenance windows in the UI and on API responses | `system_banner` |
 | Look up objects you don't manage here, by their natural key | `data.artifactkeeper_repository`, `data.artifactkeeper_project`, `data.artifactkeeper_user`, `data.artifactkeeper_group` |
 
 Deliberately **not** modelled, because they aren't declarative state: imperative actions
@@ -46,7 +47,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.10.2"
+      version = "~> 1.11.0"
     }
   }
 }

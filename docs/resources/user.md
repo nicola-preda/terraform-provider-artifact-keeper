@@ -37,7 +37,7 @@ resource "artifactkeeper_user" "alice" {
 - `display_name` (String)
 - `is_active` (Boolean) Defaults to `true`.
 - `is_admin` (Boolean) Defaults to `false`.
-- `password` (String, Sensitive) Initial password; if omitted a password is generated (see `generated_password`). Not returned by the API. Changing it forces a new user.
+- `password` (String, Sensitive) Password; if omitted at create a password is generated (see `generated_password`). Not returned by the API. Changing it sets the new password in place, as an admin does in the UI.
 
 ### Read-Only
 

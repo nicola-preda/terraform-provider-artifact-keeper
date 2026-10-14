@@ -1,0 +1,1 @@
+terraform import artifactkeeper_repository_allowlist.conda conda-virtual

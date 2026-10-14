@@ -19,31 +19,35 @@ type CiOidcMapping struct {
 	// or array of strings (any-of). Passed through verbatim.
 	ClaimFilters json.RawMessage `json:"claim_filters"`
 	// AllowedRepoIDs is an optional repository restriction (nil = unrestricted).
-	AllowedRepoIDs []string `json:"allowed_repo_ids"`
-	IsEnabled      bool     `json:"is_enabled"`
-	CreatedAt      string   `json:"created_at"`
-	UpdatedAt      string   `json:"updated_at"`
+	AllowedRepoIDs  []string `json:"allowed_repo_ids"`
+	GroupBindingIDs []string `json:"group_binding_ids"`
+	IsEnabled       bool     `json:"is_enabled"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
 }
 
 // CreateCiOidcMappingRequest maps POST .../ci-oidc/{provider_id}/mappings.
 // name and claim_filters required; omitted priority defaults to 100, is_enabled
 // to true.
 type CreateCiOidcMappingRequest struct {
-	Name           string          `json:"name"`
-	Priority       *int64          `json:"priority,omitempty"`
-	ClaimFilters   json.RawMessage `json:"claim_filters"`
-	AllowedRepoIDs []string        `json:"allowed_repo_ids,omitempty"`
-	IsEnabled      *bool           `json:"is_enabled,omitempty"`
+	Name            string          `json:"name"`
+	Priority        *int64          `json:"priority,omitempty"`
+	ClaimFilters    json.RawMessage `json:"claim_filters"`
+	AllowedRepoIDs  []string        `json:"allowed_repo_ids,omitempty"`
+	GroupBindingIDs []string        `json:"group_binding_ids,omitempty"`
+	IsEnabled       *bool           `json:"is_enabled,omitempty"`
 }
 
 // UpdateCiOidcMappingRequest maps PUT .../ci-oidc/{provider_id}/mappings/{mapping_id}.
-// Omitted fields keep their current value.
+// Omitted fields keep their current value. The two id lists are always sent:
+// null clears them (1.11.0), so removing one from config takes effect.
 type UpdateCiOidcMappingRequest struct {
-	Name           *string         `json:"name,omitempty"`
-	Priority       *int64          `json:"priority,omitempty"`
-	ClaimFilters   json.RawMessage `json:"claim_filters,omitempty"`
-	AllowedRepoIDs []string        `json:"allowed_repo_ids,omitempty"`
-	IsEnabled      *bool           `json:"is_enabled,omitempty"`
+	Name            *string         `json:"name,omitempty"`
+	Priority        *int64          `json:"priority,omitempty"`
+	ClaimFilters    json.RawMessage `json:"claim_filters,omitempty"`
+	AllowedRepoIDs  *[]string       `json:"allowed_repo_ids"`
+	GroupBindingIDs *[]string       `json:"group_binding_ids"`
+	IsEnabled       *bool           `json:"is_enabled,omitempty"`
 }
 
 func (c *Client) CreateCiOidcMapping(ctx context.Context, providerID string, req CreateCiOidcMappingRequest) (*CiOidcMapping, error) {

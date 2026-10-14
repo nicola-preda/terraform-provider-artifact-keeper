@@ -57,6 +57,16 @@ func listToStringSlice(ctx context.Context, l types.List) ([]string, diag.Diagno
 	return out, d
 }
 
+// setToStringSlice reads a types.Set into a Go slice (nil when null/unknown).
+func setToStringSlice(ctx context.Context, s types.Set) ([]string, diag.Diagnostics) {
+	if s.IsNull() || s.IsUnknown() {
+		return nil, nil
+	}
+	var out []string
+	d := s.ElementsAs(ctx, &out, false)
+	return out, d
+}
+
 // optionalBool returns a *bool for a set value, or nil when null/unknown.
 func optionalBool(v types.Bool) *bool {
 	if v.IsNull() || v.IsUnknown() {
@@ -96,4 +106,83 @@ func mapToStringMap(ctx context.Context, m types.Map) (map[string]string, diag.D
 	out := map[string]string{}
 	d := m.ElementsAs(ctx, &out, false)
 	return out, d
+}
+
+// predicatesJSON returns a configured JSON attribute as a raw body field, or
+// nil to omit it.
+func predicatesJSON(v types.String) json.RawMessage {
+	if v.IsNull() || v.IsUnknown() {
+		return nil
+	}
+	return json.RawMessage(v.ValueString())
+}
+
+// jsonKeepPrior returns the prior JSON attribute when the server's answer says
+// the same thing, else the server's answer. "The same" allows the server to
+// add keys whose value is empty (false, 0, "", null, [] or {}), which is how a
+// defaulted predicate block comes back.
+func jsonKeepPrior(prior types.String, got json.RawMessage) types.String {
+	if len(got) == 0 || string(got) == "null" {
+		return types.StringNull()
+	}
+	if !prior.IsNull() && !prior.IsUnknown() {
+		var a, b any
+		if json.Unmarshal([]byte(prior.ValueString()), &a) == nil && json.Unmarshal(got, &b) == nil && jsonCovers(a, b) {
+			return prior
+		}
+	}
+	return types.StringValue(string(got))
+}
+
+// jsonCovers reports whether want and got agree, treating keys present only
+// in got as agreeing when their value is empty.
+func jsonCovers(want, got any) bool {
+	wm, wok := want.(map[string]any)
+	gm, gok := got.(map[string]any)
+	if wok && gok {
+		for k, gv := range gm {
+			wv, present := wm[k]
+			if !present {
+				if !jsonEmpty(gv) {
+					return false
+				}
+				continue
+			}
+			if !jsonCovers(wv, gv) {
+				return false
+			}
+		}
+		for k := range wm {
+			if _, present := gm[k]; !present {
+				return false
+			}
+		}
+		return true
+	}
+	wb, _ := json.Marshal(want)
+	gb, _ := json.Marshal(got)
+	return string(wb) == string(gb)
+}
+
+func jsonEmpty(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return true
+	case bool:
+		return !x
+	case float64:
+		return x == 0
+	case string:
+		return x == ""
+	case []any:
+		return len(x) == 0
+	case map[string]any:
+		for _, e := range x {
+			if !jsonEmpty(e) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

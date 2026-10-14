@@ -15,6 +15,7 @@ type Repository struct {
 	Format                 string  `json:"format"`
 	RepoType               string  `json:"repo_type"`
 	IsPublic               bool    `json:"is_public"`
+	Visibility             string  `json:"visibility"`
 	AllowAnonymousAccess   bool    `json:"allow_anonymous_access"`
 	StorageUsedBytes       int64   `json:"storage_used_bytes"`
 	QuotaBytes             *int64  `json:"quota_bytes"`
@@ -25,6 +26,7 @@ type Repository struct {
 	VersioningEnabled      bool    `json:"versioning_enabled"`
 	ProjectID              *string `json:"project_id"`
 	HasTrustedGpgKey       bool    `json:"has_trusted_gpg_key"`
+	RepodataDepth          *int64  `json:"repodata_depth"`
 	CustomUserAgent        *string `json:"custom_user_agent"`
 	AptOrigin              *string `json:"apt_origin"`
 	AptLabel               *string `json:"apt_label"`
@@ -70,23 +72,27 @@ type DebianConfig struct {
 // CreateRepositoryRequest maps CreateRepositoryRequest. Only the fields the
 // Terraform resource surfaces; the API accepts more.
 type CreateRepositoryRequest struct {
-	Key                   string  `json:"key"`
-	Name                  string  `json:"name"`
-	Description           *string `json:"description,omitempty"`
-	Format                string  `json:"format"`
-	RepoType              string  `json:"repo_type"`
-	IsPublic              *bool   `json:"is_public,omitempty"`
-	UpstreamURL           *string `json:"upstream_url,omitempty"`
-	QuotaBytes            *int64  `json:"quota_bytes,omitempty"`
-	PromotionOnly         *bool   `json:"promotion_only,omitempty"`
-	VersioningEnabled     *bool   `json:"versioning_enabled,omitempty"`
-	StorageBackend        *string `json:"storage_backend,omitempty"`
-	FormatKey             *string `json:"format_key,omitempty"`
-	IndexUpstreamURL      *string `json:"index_upstream_url,omitempty"`
-	PypiUpstreamIndexPath *string `json:"pypi_upstream_index_path,omitempty"`
-	CustomUserAgent       *string `json:"custom_user_agent,omitempty"`
-	ProjectID             *string `json:"project_id,omitempty"`
-	TrustedGpgKey         *string `json:"trusted_gpg_key,omitempty"`
+	Key                          string   `json:"key"`
+	Name                         string   `json:"name"`
+	Description                  *string  `json:"description,omitempty"`
+	Format                       string   `json:"format"`
+	RepoType                     string   `json:"repo_type"`
+	IsPublic                     *bool    `json:"is_public,omitempty"`
+	Visibility                   *string  `json:"visibility,omitempty"`
+	UpstreamURL                  *string  `json:"upstream_url,omitempty"`
+	QuotaBytes                   *int64   `json:"quota_bytes,omitempty"`
+	PromotionOnly                *bool    `json:"promotion_only,omitempty"`
+	VersioningEnabled            *bool    `json:"versioning_enabled,omitempty"`
+	StorageBackend               *string  `json:"storage_backend,omitempty"`
+	FormatKey                    *string  `json:"format_key,omitempty"`
+	IndexUpstreamURL             *string  `json:"index_upstream_url,omitempty"`
+	PypiUpstreamIndexPath        *string  `json:"pypi_upstream_index_path,omitempty"`
+	CustomUserAgent              *string  `json:"custom_user_agent,omitempty"`
+	ProjectID                    *string  `json:"project_id,omitempty"`
+	TrustedGpgKey                *string  `json:"trusted_gpg_key,omitempty"`
+	RepodataDepth                *int64   `json:"repodata_depth,omitempty"`
+	OciTrustedBearerRealms       []string `json:"oci_trusted_bearer_realms,omitempty"`
+	NpmVirtualIsolateHostedNames *bool    `json:"npm_virtual_isolate_hosted_names,omitempty"`
 	// Opt into ingesting unverified upstream metadata on the keyless RPM
 	// curation-sync path (#2569). Write-only; not echoed in the response.
 	CurationAllowUnverified *bool         `json:"curation_allow_unverified,omitempty"`
@@ -101,17 +107,22 @@ type CreateRepositoryRequest struct {
 // UpdateRepositoryRequest maps the mutable subset of UpdateRepositoryRequest
 // (PATCH /repositories/{key}).
 type UpdateRepositoryRequest struct {
-	Name                  *string `json:"name,omitempty"`
-	Description           *string `json:"description,omitempty"`
-	IsPublic              *bool   `json:"is_public,omitempty"`
-	QuotaBytes            *int64  `json:"quota_bytes,omitempty"`
-	PromotionOnly         *bool   `json:"promotion_only,omitempty"`
-	VersioningEnabled     *bool   `json:"versioning_enabled,omitempty"`
-	IndexUpstreamURL      *string `json:"index_upstream_url,omitempty"`
-	PypiUpstreamIndexPath *string `json:"pypi_upstream_index_path,omitempty"`
-	CustomUserAgent       *string `json:"custom_user_agent,omitempty"`
-	ProjectID             *string `json:"project_id,omitempty"`
-	TrustedGpgKey         *string `json:"trusted_gpg_key,omitempty"`
+	Name                         *string  `json:"name,omitempty"`
+	Description                  *string  `json:"description,omitempty"`
+	IsPublic                     *bool    `json:"is_public,omitempty"`
+	Visibility                   *string  `json:"visibility,omitempty"`
+	QuotaBytes                   *int64   `json:"quota_bytes,omitempty"`
+	PromotionOnly                *bool    `json:"promotion_only,omitempty"`
+	VersioningEnabled            *bool    `json:"versioning_enabled,omitempty"`
+	IndexUpstreamURL             *string  `json:"index_upstream_url,omitempty"`
+	PypiUpstreamIndexPath        *string  `json:"pypi_upstream_index_path,omitempty"`
+	CustomUserAgent              *string  `json:"custom_user_agent,omitempty"`
+	ProjectID                    *string  `json:"project_id,omitempty"`
+	TrustedGpgKey                *string  `json:"trusted_gpg_key,omitempty"`
+	RepodataDepth                *int64   `json:"repodata_depth,omitempty"`
+	OciTrustedBearerRealms       []string `json:"oci_trusted_bearer_realms,omitempty"`
+	NpmVirtualIsolateHostedNames *bool    `json:"npm_virtual_isolate_hosted_names,omitempty"`
+	VirtualMetadataPartial       *bool    `json:"virtual_metadata_partial,omitempty"`
 	// Update-only settable fields (not accepted on create; set with a follow-up
 	// PATCH). All echoed back in the response, so they round-trip.
 	QuarantineEnabled         *bool    `json:"quarantine_enabled,omitempty"`
