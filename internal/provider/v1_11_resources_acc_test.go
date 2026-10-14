@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -9,6 +10,9 @@ import (
 // TestAccV111Surface exercises everything 1.11.0 added to the provider against
 // a live instance: create, empty re-plan, an in-place update, and import.
 func TestAccV111Surface(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("acceptance test; set TF_ACC to run")
+	}
 	testAccPreCheck(t)
 	testAccSkipIfEndpointMissing(t, "GET", "/admin/settings/system")
 
