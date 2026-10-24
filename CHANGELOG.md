@@ -5,6 +5,14 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Fixed
+
+- `artifactkeeper_repository_upstream_filter` preserves explicitly empty
+  `include_patterns` and `exclude_patterns` lists during create, update and
+  refresh, avoiding inconsistent-result errors. Omitted lists remain null (#7).
+
 ## [1.11.0] - 2026-10-14
 
 Validated against Artifact Keeper 1.11.0. No route moved and no field the provider reads or
