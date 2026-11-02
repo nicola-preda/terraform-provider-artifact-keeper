@@ -121,8 +121,9 @@ resource "artifactkeeper_signing_key" "gpg_ed25519" {
 }
 
 resource "artifactkeeper_security_policy" "origin" {
-  name         = "tf-acc-111-origin"
-  max_severity = "critical"
+  name          = "tf-acc-111-origin"
+  block_on_fail = false
+  max_severity  = "critical"
   predicates   = jsonencode({ origin = { allowed_kinds = ["hosted", "proxy"] } })
 }
 `

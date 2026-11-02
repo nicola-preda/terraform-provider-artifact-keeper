@@ -19,6 +19,8 @@ type UpstreamAuthRequest struct {
 	// ignored otherwise. It carries no secret: the AWS identity comes from the
 	// backend process's own credential chain.
 	Aws *AwsUpstreamAuth `json:"aws,omitempty"`
+	// Accepts credentials on a public repository (1.11.1, #4662).
+	AllowPublicWithUpstreamCredentials *bool `json:"allow_public_with_upstream_credentials,omitempty"`
 }
 
 // AwsUpstreamAuth maps AwsUpstreamAuthRequest, the non-secret provider settings

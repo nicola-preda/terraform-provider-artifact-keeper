@@ -37,9 +37,9 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.11.0** (2026-10-14) |
-| Provider changes needed | lifecycle scope (`applies_to_all`, `repository_ids`), `record_only`, repository `visibility`, permission `allowed_cidrs`/`anonymous`, four new resources, in-place user password |
-| Acceptance suite | not yet run live against 1.11.0; `TestAccV111Surface` covers the new surface |
+| Validated against | **Artifact Keeper 1.11.10** (2026-11-02) |
+| Provider changes needed | `allow_public_with_upstream_credentials` (repository, upstream auth), allowlist `scope`, repository data source fixed (broken since 1.11.0) |
+| Acceptance suite | run live against 1.11.10 on 2026-11-02: `main` 17/17 on vanilla, `proton-1.11.10` 18/18 on the Proton build |
 
 1.11.0 moved no route and removed no field the provider uses. **516 documented routes against
 470 at 1.10.2**, 46 added and none removed. The struct diff's six apparent removals are
@@ -510,16 +510,7 @@ endpoints 1.8.0 added.
 
 **Closed in v1.7.4:** `migration_job.repo_mappings`, the only settable field 1.7.3 added.
 
-**Known broken, and it is the backend's fault: `peer_network_profile`.** The resource sends
-`PUT /peers/{id}/network-profile`, which is the path the handler's own doc comment, its
-`#[utoipa::path]` and its unit test all say it lives at. The production router disagrees:
-`routes.rs` does `.merge(handlers::peer::network_profile_router())` into the `/peers` nest,
-and that router is `Router::new().route("/network-profile", put(update_network_profile))` with
-no `/:id` prefix, so the only mounted path is `PUT /api/v1/peers/network-profile` — served by
-a handler that extracts `Path<Uuid>` and has nothing to extract. The provider's call 404s and
-the mounted path cannot work either. Unchanged since at least v1.7.4, and invisible to the
-acceptance suite because `peer` needs a reachable peer to exercise. Fix belongs upstream
-(nest the router under `/:id`, as the test does); until then the resource is inert.
+**`peer_network_profile` works from Artifact Keeper 1.11.7** (#4884 mounted the missing `/:id`), covered live by `TestAccV11110Surface`.
 
 **Deliberately unmodelled settable fields.** `RegisterPeerRequest.sync_filter` is write-only
 in practice: `PeerInstanceResponse` doesn't return it and peers have no `PATCH`, so it could
@@ -601,7 +592,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.11.0 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.11.10 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh

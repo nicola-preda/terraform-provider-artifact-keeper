@@ -5,6 +5,35 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [1.11.10] - 2026-10-30
+
+Validated against Artifact Keeper 1.11.10. No route moved and no field the provider reads or
+sends was removed, renamed or retyped between 1.11.0 and 1.11.10 (516 documented routes at
+both). Two upstream guardrails needed new attributes.
+
+### Added
+
+- **`allow_public_with_upstream_credentials`** on `artifactkeeper_repository` and
+  `artifactkeeper_repository_upstream_auth`. Since 1.11.1 (#4662) making a credentialed
+  repository public, or giving a public one credentials, is refused with 400
+  `PUBLIC_REMOTE_UPSTREAM_CREDENTIALS` unless this is `true`. Repositories already in that
+  state before the upgrade keep working.
+- **`artifactkeeper_repository_allowlist.scope`**: `all_members` or `remote_only`. Since
+  1.11.9 (#5055) the list filters hosted members too by default; `remote_only` restores the
+  earlier behaviour. Sent only when set, so older backends are unaffected.
+
+### Fixed
+
+- **`data.artifactkeeper_repository` reads again.** Since 1.11.0 every read failed with a Value Conversion Error: the data source schema lacked six attributes the shared model gained (`visibility`, `repodata_depth` and the write-only flags). Unit tests now pin the schema to the model.
+- `artifactkeeper_peer_network_profile` works against 1.11.7 and later, where upstream
+  mounted the missing `/:id` route segment (#4884).
+
+### Upgrade notes from the backend
+
+- Behind a trusted proxy, permission `allowed_cidrs` stop matching until
+  `XFF_TRUSTED_FOR_AUTHZ=true` is set (1.11.1).
+- A CI OIDC provider `audience` of `https://kubernetes.default.svc` is refused (1.11.1).
+
 ## [1.11.0] - 2026-10-14
 
 Validated against Artifact Keeper 1.11.0. No route moved and no field the provider reads or

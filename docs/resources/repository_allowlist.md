@@ -3,12 +3,12 @@
 page_title: "artifactkeeper_repository_allowlist Resource - artifactkeeper"
 subcategory: ""
 description: |-
-  The package allowlist of a virtual conda channel (Artifact Keeper 1.11.0): while enabled, a package from a Remote member is served only if an entry admits it; hosted members are not filtered. A singleton keyed by repository key; destroy removes the list.
+  The package allowlist of a virtual conda channel (Artifact Keeper 1.11.0): while enabled, a package is served only if an entry admits it, from every member or only from Remote members per scope. A singleton keyed by repository key; destroy removes the list.
 ---
 
 # artifactkeeper_repository_allowlist (Resource)
 
-The package allowlist of a virtual conda channel (Artifact Keeper 1.11.0): while enabled, a package from a Remote member is served only if an entry admits it; hosted members are not filtered. A singleton keyed by repository key; destroy removes the list.
+The package allowlist of a virtual conda channel (Artifact Keeper 1.11.0): while enabled, a package is served only if an entry admits it, from every member or only from Remote members per `scope`. A singleton keyed by repository key; destroy removes the list.
 
 ## Example Usage
 
@@ -36,6 +36,7 @@ resource "artifactkeeper_repository_allowlist" "conda" {
 ### Optional
 
 - `entries` (Attributes List) Admitted packages. (see [below for nested schema](#nestedatt--entries))
+- `scope` (String) Which members the list filters (Artifact Keeper 1.11.9): `all_members` (the default, hosted and Remote) or `remote_only` (the behaviour before 1.11.9). Omitted keeps the stored scope.
 
 ### Read-Only
 

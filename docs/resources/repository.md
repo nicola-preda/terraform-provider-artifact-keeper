@@ -69,6 +69,7 @@ resource "artifactkeeper_repository" "debian_proxy" {
 
 ### Optional
 
+- `allow_public_with_upstream_credentials` (Boolean) Accept a public repository that carries upstream credentials (Artifact Keeper 1.11.1), which anonymous callers then spend upstream. Without it, making a credentialed repository public, or giving a public one credentials, is refused with 400 `PUBLIC_REMOTE_UPSTREAM_CREDENTIALS`. Stored with the repository; set `false` to withdraw it.
 - `apt_description` (String) Custom `Description` field for Debian/APT `Release` files.
 - `apt_label` (String) Custom `Label` field for Debian/APT `Release` files.
 - `apt_origin` (String) Custom `Origin` field for Debian/APT `Release` files.

@@ -28,6 +28,7 @@ data "artifactkeeper_repository" "docker" {
 ### Read-Only
 
 - `allow_anonymous_access` (Boolean)
+- `allow_public_with_upstream_credentials` (Boolean) Whether a public repository was accepted with upstream credentials.
 - `apt_description` (String) Custom APT Release Description, if set.
 - `apt_label` (String) Custom APT Release Label, if set.
 - `apt_origin` (String) Custom APT Release Origin, if set.
@@ -48,6 +49,8 @@ data "artifactkeeper_repository" "docker" {
 - `members` (List of String) For `virtual` repositories: ordered member repository keys. Null for non-virtual repositories.
 - `name` (String)
 - `npm_allowed_name_patterns` (List of String) Allowed npm full-name glob patterns, if set.
+- `npm_virtual_isolate_hosted_names` (Boolean) Write-only; never returned by the API.
+- `oci_trusted_bearer_realms` (List of String) Write-only; never returned by the API.
 - `project_id` (String) UUID of the assigned project, if any.
 - `promotion_only` (Boolean) Whether direct uploads are rejected (promotion-only).
 - `pypi_upstream_index_path` (String) Write-only; not returned by the API.
@@ -55,6 +58,7 @@ data "artifactkeeper_repository" "docker" {
 - `quarantine_enabled` (Boolean) Whether the quarantine hold is enabled, if set.
 - `quota_bytes` (Number)
 - `repo_type` (String)
+- `repodata_depth` (Number) RPM repodata directory depth, if set.
 - `storage_backend` (String) Write-only; not returned by the API.
 - `storage_used_bytes` (Number)
 - `trusted_gpg_key` (String, Sensitive) Write-only; never returned (see `has_trusted_gpg_key`).
@@ -63,6 +67,8 @@ data "artifactkeeper_repository" "docker" {
 - `upstream_auth_type` (String)
 - `upstream_url` (String)
 - `versioning_enabled` (Boolean) Whether first-class artifact versioning is enabled.
+- `virtual_metadata_partial` (Boolean) Write-only; never returned by the API.
+- `visibility` (String) Who may read the repository: `public`, `internal` or `private`.
 
 <a id="nestedatt--debian"></a>
 ### Nested Schema for `debian`

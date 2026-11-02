@@ -17,12 +17,14 @@ type AllowlistEntry struct {
 // RepositoryAllowlist is the body of PUT /repositories/{key}/allowlist.
 type RepositoryAllowlist struct {
 	Enabled bool             `json:"enabled"`
+	Scope   *string          `json:"scope,omitempty"`
 	Entries []AllowlistEntry `json:"entries"`
 }
 
 // RepositoryAllowlistResponse mirrors CondaAllowlistResponse.
 type RepositoryAllowlistResponse struct {
 	Enabled bool             `json:"enabled"`
+	Scope   *string          `json:"scope"`
 	Entries []AllowlistEntry `json:"entries"`
 	Error   *string          `json:"error"`
 }

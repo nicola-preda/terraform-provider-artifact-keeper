@@ -39,6 +39,7 @@ type repositoryUpstreamAuthResourceModel struct {
 	Username           types.String `tfsdk:"username"`
 	Password           types.String `tfsdk:"password"`
 	Aws                types.Object `tfsdk:"aws"`
+	AllowPublic        types.Bool   `tfsdk:"allow_public_with_upstream_credentials"`
 	Configured         types.Bool   `tfsdk:"configured"`
 	ConfiguredAuthType types.String `tfsdk:"configured_auth_type"`
 }
@@ -85,6 +86,10 @@ func (r *repositoryUpstreamAuthResource) Schema(_ context.Context, _ resource.Sc
 				Optional:            true,
 				Sensitive:           true,
 				MarkdownDescription: "Password for `basic` auth or the token for `bearer` auth. Not returned by the API.",
+			},
+			"allow_public_with_upstream_credentials": schema.BoolAttribute{
+				Optional:            true,
+				MarkdownDescription: "Accept these credentials on a public repository (Artifact Keeper 1.11.1), which anonymous callers then spend upstream. Without it the write is refused with 400 `PUBLIC_REMOTE_UPSTREAM_CREDENTIALS`. Stored with the repository, the same flag as on `artifactkeeper_repository`.",
 			},
 			"aws": schema.SingleNestedAttribute{
 				Optional:            true,
@@ -242,9 +247,10 @@ func (r *repositoryUpstreamAuthResource) ImportState(ctx context.Context, req re
 
 func upstreamAuthRequestFromModel(ctx context.Context, m repositoryUpstreamAuthResourceModel) (client.UpstreamAuthRequest, diag.Diagnostics) {
 	req := client.UpstreamAuthRequest{
-		AuthType: m.AuthType.ValueString(),
-		Username: optionalString(m.Username),
-		Password: optionalString(m.Password),
+		AuthType:                           m.AuthType.ValueString(),
+		Username:                           optionalString(m.Username),
+		Password:                           optionalString(m.Password),
+		AllowPublicWithUpstreamCredentials: optionalBool(m.AllowPublic),
 	}
 	var diags diag.Diagnostics
 	if m.Aws.IsNull() || m.Aws.IsUnknown() {

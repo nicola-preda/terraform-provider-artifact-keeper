@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -32,6 +34,7 @@ type repositoryAllowlistResourceModel struct {
 	ID            types.String `tfsdk:"id"`
 	RepositoryKey types.String `tfsdk:"repository_key"`
 	Enabled       types.Bool   `tfsdk:"enabled"`
+	Scope         types.String `tfsdk:"scope"`
 	Entries       types.List   `tfsdk:"entries"`
 }
 
@@ -53,7 +56,7 @@ func (r *repositoryAllowlistResource) Metadata(_ context.Context, req resource.M
 
 func (r *repositoryAllowlistResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The package allowlist of a virtual conda channel (Artifact Keeper 1.11.0): while enabled, a package from a Remote member is served only if an entry admits it; hosted members are not filtered. A singleton keyed by repository key; destroy removes the list.",
+		MarkdownDescription: "The package allowlist of a virtual conda channel (Artifact Keeper 1.11.0): while enabled, a package is served only if an entry admits it, from every member or only from Remote members per `scope`. A singleton keyed by repository key; destroy removes the list.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -68,6 +71,13 @@ func (r *repositoryAllowlistResource) Schema(_ context.Context, _ resource.Schem
 			"enabled": schema.BoolAttribute{
 				Required:            true,
 				MarkdownDescription: "Whether the list is enforced. An enabled empty list admits nothing from Remote members.",
+			},
+			"scope": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Which members the list filters (Artifact Keeper 1.11.9): `all_members` (the default, hosted and Remote) or `remote_only` (the behaviour before 1.11.9). Omitted keeps the stored scope.",
+				Validators:          []validator.String{stringvalidator.OneOf("all_members", "remote_only")},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"entries": schema.ListNestedAttribute{
 				Optional:            true,
@@ -127,7 +137,7 @@ func (r *repositoryAllowlistResource) Update(ctx context.Context, req resource.U
 }
 
 func (r *repositoryAllowlistResource) put(ctx context.Context, plan repositoryAllowlistResourceModel, state *tfsdk.State, diags *diag.Diagnostics) {
-	body := client.RepositoryAllowlist{Enabled: plan.Enabled.ValueBool(), Entries: []client.AllowlistEntry{}}
+	body := client.RepositoryAllowlist{Enabled: plan.Enabled.ValueBool(), Scope: optionalString(plan.Scope), Entries: []client.AllowlistEntry{}}
 	if !plan.Entries.IsNull() && !plan.Entries.IsUnknown() {
 		var entries []allowlistEntryModel
 		diags.Append(plan.Entries.ElementsAs(ctx, &entries, false)...)
@@ -176,6 +186,7 @@ func allowlistToModel(ctx context.Context, key string, a *client.RepositoryAllow
 		ID:            types.StringValue(key),
 		RepositoryKey: types.StringValue(key),
 		Enabled:       types.BoolValue(a.Enabled),
+		Scope:         stringPointerValue(a.Scope),
 		Entries:       types.ListNull(types.ObjectType{AttrTypes: allowlistEntryAttrTypes}),
 	}
 	if len(a.Entries) == 0 {

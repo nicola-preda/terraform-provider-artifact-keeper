@@ -49,6 +49,7 @@ type repositoryResourceModel struct {
 	Format                       types.String `tfsdk:"format"`
 	RepoType                     types.String `tfsdk:"repo_type"`
 	IsPublic                     types.Bool   `tfsdk:"is_public"`
+	AllowPublicUpstreamCreds     types.Bool   `tfsdk:"allow_public_with_upstream_credentials"`
 	Visibility                   types.String `tfsdk:"visibility"`
 	AllowAnonymousAccess         types.Bool   `tfsdk:"allow_anonymous_access"`
 	StorageUsedBytes             types.Int64  `tfsdk:"storage_used_bytes"`
@@ -158,6 +159,12 @@ func (r *repositoryResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Computed:            true,
 				MarkdownDescription: "Whether anonymous (unauthenticated) users may download artifacts. Defaults to `false`. The legacy view of `visibility` (`true` is `public`); set one or the other.",
 				Validators:          []validator.Bool{boolvalidator.ConflictsWith(path.MatchRoot("visibility"))},
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"allow_public_with_upstream_credentials": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Accept a public repository that carries upstream credentials (Artifact Keeper 1.11.1), which anonymous callers then spend upstream. Without it, making a credentialed repository public, or giving a public one credentials, is refused with 400 `PUBLIC_REMOTE_UPSTREAM_CREDENTIALS`. Stored with the repository; set `false` to withdraw it.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"visibility": schema.StringAttribute{
@@ -497,6 +504,7 @@ func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 	createReq.RepodataDepth = optionalInt64(plan.RepodataDepth)
 	createReq.NpmVirtualIsolateHostedNames = optionalBool(plan.NpmVirtualIsolateHostedNames)
+	createReq.AllowPublicWithUpstreamCredentials = optionalBool(plan.AllowPublicUpstreamCreds)
 	realms, d := listToStringSlice(ctx, plan.OciTrustedBearerRealms)
 	resp.Diagnostics.Append(d...)
 	createReq.OciTrustedBearerRealms = realms
@@ -680,6 +688,7 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 		updateReq.RepodataDepth = optionalInt64(plan.RepodataDepth)
 	}
 	updateReq.NpmVirtualIsolateHostedNames = optionalBool(plan.NpmVirtualIsolateHostedNames)
+	updateReq.AllowPublicWithUpstreamCredentials = optionalBool(plan.AllowPublicUpstreamCreds)
 	updateReq.VirtualMetadataPartial = optionalBool(plan.VirtualMetadataPartial)
 	realms, d := listToStringSlice(ctx, plan.OciTrustedBearerRealms)
 	resp.Diagnostics.Append(d...)
@@ -811,6 +820,7 @@ func repositoryToModel(ctx context.Context, repo *client.Repository) (repository
 		UpstreamURL:               stringPointerValue(repo.UpstreamURL),
 		UpstreamAuthType:          stringPointerValue(repo.UpstreamAuthType),
 		UpstreamAuthConfigured:    types.BoolValue(repo.UpstreamAuthConfigured),
+		AllowPublicUpstreamCreds:  types.BoolValue(repo.AllowPublicWithUpstreamCredentials),
 		CreatedAt:                 types.StringValue(repo.CreatedAt),
 		UpdatedAt:                 types.StringValue(repo.UpdatedAt),
 		Members:                   types.ListNull(types.StringType),
@@ -832,12 +842,15 @@ func repositoryToModel(ctx context.Context, repo *client.Repository) (repository
 		Debian:                    debian,
 		// Write-only/create-only fields the API never returns; filled from plan
 		// (Create/Update) or prior state (Read).
-		TrustedGpgKey:           types.StringNull(),
-		StorageBackend:          types.StringNull(),
-		FormatKey:               types.StringNull(),
-		IndexUpstreamURL:        types.StringNull(),
-		PypiUpstreamIndexPath:   types.StringNull(),
-		CurationAllowUnverified: types.BoolNull(),
+		TrustedGpgKey:                types.StringNull(),
+		StorageBackend:               types.StringNull(),
+		FormatKey:                    types.StringNull(),
+		IndexUpstreamURL:             types.StringNull(),
+		PypiUpstreamIndexPath:        types.StringNull(),
+		CurationAllowUnverified:      types.BoolNull(),
+		OciTrustedBearerRealms:       types.ListNull(types.StringType),
+		NpmVirtualIsolateHostedNames: types.BoolNull(),
+		VirtualMetadataPartial:       types.BoolNull(),
 	}
 	return model, diags
 }
