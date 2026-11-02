@@ -1,0 +1,65 @@
+CHANGELOG.md
+  h_206b40f42abaf2 8-36
+MAINTAINING.md
+  h_206b40f42abaf2 40-42,513,595
+docker-compose.test.yml
+  h_206b40f42abaf2 45
+docs/data-sources/repository.md
+  h_206b40f42abaf2 31,52-53,61,70-71
+docs/index.md
+  h_206b40f42abaf2 5,10
+docs/resources/repository.md
+  h_206b40f42abaf2 72
+docs/resources/repository_allowlist.md
+  h_206b40f42abaf2 6,11,39
+docs/resources/repository_upstream_auth.md
+  h_206b40f42abaf2 42
+internal/client/repository.go
+  h_206b40f42abaf2 25-36,77-98,113-129
+internal/client/repository_allowlist.go
+  h_206b40f42abaf2 20,27
+internal/client/repository_upstream_auth.go
+  h_206b40f42abaf2 22-23
+internal/provider/provider.go
+  h_206b40f42abaf2 25
+internal/provider/repository_allowlist_resource.go
+  h_206b40f42abaf2 6,14,37,59,75-81,140,189
+internal/provider/repository_data_source.go
+  h_206b40f42abaf2 32-52
+internal/provider/repository_data_source_test.go
+  h_206b40f42abaf2 1-41
+internal/provider/repository_resource.go
+  h_206b40f42abaf2 52,164-169,507,691,823,845-853
+internal/provider/repository_upstream_auth_resource.go
+  h_206b40f42abaf2 42,90-93,250-253
+internal/provider/v1_11_10_acc_test.go
+  h_206b40f42abaf2 1-111
+internal/provider/v1_11_resources_acc_test.go
+  h_206b40f42abaf2 124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "059f39dd83e6829caf03ec7e706cd37976296476",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 321,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 95,
+    "git_diff_added_lines": 321,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "2adb95454f412af91ce9aa29e50e442578cea31d"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}
