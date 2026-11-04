@@ -1,0 +1,35 @@
+docs/resources/group.md
+  h_206b40f42abaf2 32
+internal/client/client_test.go
+  h_206b40f42abaf2 5,108-130
+internal/client/group.go
+  h_206b40f42abaf2 35-46
+internal/provider/group_resource.go
+  h_206b40f42abaf2 34,55-59,76-88,93,111,125,143-144,151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c419c6f5bed01cd642d499fb3e356c1ff4fa1df5",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 62,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 5,
+    "git_diff_added_lines": 62,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "b8357c5edf2c3e4455df216053ec06551e936ab9"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}
