@@ -1,0 +1,21 @@
+docs/resources/system_settings.md
+  h_206b40f42abaf2 37
+docs/resources/user_role_assignment.md
+  h_206b40f42abaf2 6,11
+internal/provider/system_settings_resource.go
+  h_206b40f42abaf2 115
+internal/provider/user_role_assignment_resource.go
+  h_206b40f42abaf2 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "cc5b2f8378a57de34fb76a72c0668de8bfddedcd",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
