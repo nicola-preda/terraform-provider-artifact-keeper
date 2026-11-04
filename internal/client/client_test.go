@@ -61,6 +61,14 @@ func TestDoGivesUpAfterMaxAttempts(t *testing.T) {
 	}
 }
 
+// An empty error body (a 405 from a backend without the route) still names the status
+func TestAPIErrorEmptyBody(t *testing.T) {
+	got := (&APIError{StatusCode: http.StatusMethodNotAllowed}).Error()
+	if want := "artifact-keeper API returned status 405: Method Not Allowed"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 // do splits a "?query" suffix off the path into the URL query, and
 // ListGroupMembers pages through with member_limit/member_offset until it has
 // members_total, concatenating the pages.
