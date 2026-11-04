@@ -1,0 +1,34 @@
+internal/client/service_account_token.go
+  h_206b40f42abaf2 39-40
+CHANGELOG.md
+  h_206b40f42abaf2 8-18
+internal/provider/service_account_token_test.go
+  h_206b40f42abaf2 1-54
+docs/resources/service_account_token.md
+  h_206b40f42abaf2 6,11,31-34,37,63
+internal/provider/service_account_token_resource.go
+  h_206b40f42abaf2 7,62,108,111-119,180-182
+examples/resources/artifactkeeper_service_account_token/resource.tf
+  h_206b40f42abaf2 16-19,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "f8ce792704d697fe3fe60851f33fbac3035fd88f",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 95,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 8,
+    "git_diff_added_lines": 95,
+    "tool_model_breakdown": {}
+  },
+  "proton_build": "1.7.6-proton.8"
+}
