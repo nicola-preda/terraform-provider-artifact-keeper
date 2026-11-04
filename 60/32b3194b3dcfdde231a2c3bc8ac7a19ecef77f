@@ -1,0 +1,17 @@
+internal/client/client.go
+  h_206b40f42abaf2 83-85,87-90
+internal/client/client_test.go
+  h_206b40f42abaf2 107-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "6032b3194b3dcfdde231a2c3bc8ac7a19ecef77f",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
