@@ -80,10 +80,14 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	if e.Message != "" {
-		return fmt.Sprintf("artifact-keeper API returned status %d: %s", e.StatusCode, e.Message)
+	msg := e.Message
+	if msg == "" {
+		msg = e.Body
 	}
-	return fmt.Sprintf("artifact-keeper API returned status %d: %s", e.StatusCode, e.Body)
+	if strings.TrimSpace(msg) == "" {
+		msg = http.StatusText(e.StatusCode)
+	}
+	return fmt.Sprintf("artifact-keeper API returned status %d: %s", e.StatusCode, msg)
 }
 
 // IsNotFound reports whether err is a 404 APIError.
