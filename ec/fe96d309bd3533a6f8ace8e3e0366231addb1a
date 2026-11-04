@@ -1,0 +1,31 @@
+internal/client/client.go
+  h_206b40f42abaf2 83-85,87-90
+internal/client/client_test.go
+  h_206b40f42abaf2 64-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ecfe96d309bd3533a6f8ace8e3e0366231addb1a",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 15,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 3,
+    "git_diff_added_lines": 15,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "4177811954d558e42574e7ddfc814ccc26cf0cf8"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}
