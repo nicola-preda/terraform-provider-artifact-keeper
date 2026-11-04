@@ -1,0 +1,15 @@
+internal/provider/system_settings_resource.go
+  h_206b40f42abaf2 5,199-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0ce2efa7483f91891dcdf4668663e2a160173a2c",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
