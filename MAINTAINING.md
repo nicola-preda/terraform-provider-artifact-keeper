@@ -215,6 +215,7 @@ Rust names (provider Go names differ where noted).
 | `sso_ldap` | `POST /admin/sso/ldap`, `GET/PUT/DELETE …/{id}` | same as OIDC | `LdapConfigResponse`, `Create/UpdateLdapConfigRequest` |
 | `sso_saml` | `POST /admin/sso/saml`, `GET/PUT/DELETE …/{id}` | same as OIDC | `SamlConfigResponse`, `Create/UpdateSamlConfigRequest` |
 | `user` | `POST /users`, `GET/PATCH/DELETE /users/{id}` | `handlers/users.rs` | `AdminUserResponse`, `CreateUserRequest`, `UpdateUserRequest`, `CreateUserResponse` |
+| `service_account` | `POST /service-accounts`, `GET/PATCH/DELETE /service-accounts/{id}`; `is_admin` via `GET/PATCH /users/{id}` (the service-account structs lack it) | `handlers/service_accounts.rs`, `handlers/users.rs` | `ServiceAccountResponse`, `CreateServiceAccountRequest`, `UpdateServiceAccountRequest`, `AdminUserResponse`, `UpdateUserRequest` |
 | `group` | `POST /groups`, `GET/PUT/DELETE /groups/{id}` | `handlers/groups.rs` | `GroupResponse`, `CreateGroupRequest` (used for POST **and** PUT) |
 | `permission` | `POST /permissions`, `GET/PUT/DELETE /permissions/{id}` | `handlers/permissions.rs`, `services/permission_service.rs` | `PermissionResponse`, `CreatePermissionRequest` (POST **and** PUT) |
 | `peer_instance_label` | `GET /peers/{id}/labels`, `POST`\|`DELETE …/{label_key}` (one resource per label; the whole-set `PUT` is not used) | `handlers/peer_instance_labels.rs` | `PeerLabelResponse`, `AddPeerLabelRequest` |
