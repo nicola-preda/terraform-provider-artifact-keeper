@@ -26,12 +26,17 @@ type serviceAccountResource struct {
 	client *client.Client
 }
 
+// serviceAccountResource manages a service account through /service-accounts,
+// except for is_admin: the service-account endpoints neither accept nor return
+// that flag, but a service account is a row in users, so it is set with
+// PATCH /users/{id} and read with GET /users/{id}, like artifactkeeper_user.
 type serviceAccountResourceModel struct {
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	Username    types.String `tfsdk:"username"`
 	DisplayName types.String `tfsdk:"display_name"`
 	IsActive    types.Bool   `tfsdk:"is_active"`
+	IsAdmin     types.Bool   `tfsdk:"is_admin"`
 	CreatedAt   types.String `tfsdk:"created_at"`
 	UpdatedAt   types.String `tfsdk:"updated_at"`
 }
@@ -69,6 +74,12 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Whether the service account is active. Defaults to `true`. Set to `false` to disable it (its API tokens stop authenticating).",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"is_admin": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Whether the service account is an Artifact Keeper administrator. Defaults to `false`. The service-account endpoints do not carry this flag, so it is set with `PATCH /users/{id}` and read with `GET /users/{id}`, which accept a service-account id. A token of an administrator service account acts as an administrator only when it was minted with the `admin` (or `*`) scope; see `artifactkeeper_service_account_token`.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"created_at": schema.StringAttribute{
@@ -118,7 +129,35 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 
 	state := serviceAccountToModel(sa)
 	state.Name = plan.Name // not returned by the API; preserved from config
+
+	// Service accounts are created as non-administrators and the create request
+	// cannot change that, so promote through the user endpoint when asked.
+	state.IsAdmin = types.BoolValue(false)
+	if !plan.IsAdmin.IsNull() && !plan.IsAdmin.IsUnknown() && plan.IsAdmin.ValueBool() {
+		isAdmin, updatedAt, err := r.setAdmin(ctx, sa.ID, plan.IsAdmin.ValueBoolPointer())
+		if err != nil {
+			resp.Diagnostics.AddError("Error setting service account administrator flag", err.Error())
+			return
+		}
+		state.IsAdmin = isAdmin
+		state.UpdatedAt = updatedAt
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+// setAdmin sets is_admin through PATCH /users/{id} and returns the flag and
+// the service account's updated_at, which that write bumps.
+func (r *serviceAccountResource) setAdmin(ctx context.Context, id string, isAdmin *bool) (types.Bool, types.String, error) {
+	u, err := r.client.UpdateUser(ctx, id, client.UpdateUserRequest{IsAdmin: isAdmin})
+	if err != nil {
+		return types.BoolNull(), types.StringNull(), err
+	}
+	sa, err := r.client.GetServiceAccount(ctx, id)
+	if err != nil {
+		return types.BoolNull(), types.StringNull(), err
+	}
+	return types.BoolValue(u.IsAdmin), types.StringValue(sa.UpdatedAt), nil
 }
 
 func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -140,12 +179,23 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 	refreshed := serviceAccountToModel(sa)
 	refreshed.Name = state.Name // not returned by the API; preserved from config
+
+	// The service-account response has no is_admin; the user row does. The
+	// account exists (the call above succeeded), so a 404 here is an error.
+	u, err := r.client.GetUser(ctx, state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading service account administrator flag", err.Error())
+		return
+	}
+	refreshed.IsAdmin = types.BoolValue(u.IsAdmin)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
 func (r *serviceAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan serviceAccountResourceModel
+	var plan, prior serviceAccountResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -166,6 +216,20 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 
 	state := serviceAccountToModel(sa)
 	state.Name = plan.Name // not returned by the API; preserved from config
+
+	// is_admin goes through the user endpoint. Every PATCH there is audited,
+	// so only send it when the flag changes.
+	state.IsAdmin = prior.IsAdmin
+	if !plan.IsAdmin.IsNull() && !plan.IsAdmin.IsUnknown() && !plan.IsAdmin.Equal(prior.IsAdmin) {
+		isAdmin, updatedAt, err := r.setAdmin(ctx, plan.ID.ValueString(), plan.IsAdmin.ValueBoolPointer())
+		if err != nil {
+			resp.Diagnostics.AddError("Error setting service account administrator flag", err.Error())
+			return
+		}
+		state.IsAdmin = isAdmin
+		state.UpdatedAt = updatedAt
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
