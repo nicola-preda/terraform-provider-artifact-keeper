@@ -5,6 +5,17 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Added
+
+- **`is_admin`** on `artifactkeeper_service_account`. The server creates service accounts as
+  non-administrators and the service-account endpoints neither accept nor return the flag, but a
+  service account is a row in `users`, so the provider sets it with `PATCH /users/{id}` and reads
+  it with `GET /users/{id}`. Lets a configuration give its own automation an administrator service
+  account instead of a local user. A token of such an account is an administrator only when minted
+  with the `admin` (or `*`) scope; the scope gate is unchanged.
+
 ## [1.11.10] - 2026-10-30
 
 Validated against Artifact Keeper 1.11.10. No route moved and no field the provider reads or
