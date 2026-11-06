@@ -1,0 +1,17 @@
+docs/resources/group.md
+  h_206b40f42abaf2 32
+internal/provider/group_resource.go
+  h_206b40f42abaf2 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d9c968ce94c876b0e2651bc179ef1c898584b58c",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
