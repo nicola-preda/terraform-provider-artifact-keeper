@@ -1,0 +1,17 @@
+docs/resources/backup_schedule.md
+  h_206b40f42abaf2 6,11,40
+internal/provider/backup_schedule_resource.go
+  h_206b40f42abaf2 53,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1b18b7a2ee12295dc09fde72c85ffa3c5acdfd13",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
