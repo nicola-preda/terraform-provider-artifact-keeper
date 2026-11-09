@@ -5,6 +5,15 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [1.11.13] - unreleased
+
+Provider-only patch, still validated against Artifact Keeper 1.11.12 (the patch digit runs ahead of AK, as at `v1.8.2`). Pins of `~> 1.11.12` pick it up
+
+### Security
+
+- Dependencies bumped for advisories reported against the provider binary: `golang.org/x/net` 0.58.0 to 0.62.0 (GO-2026-6612 and others), `golang.org/x/crypto` 0.55.0 to 0.58.0, `golang.org/x/mod` to 0.43.0, `github.com/yuin/goldmark` to 1.7.17
+- `toolchain go1.26.10` in `go.mod`: the new `go 1.26.0` line would otherwise make the release workflows build with Go 1.26.0 and its stdlib HTTP/2 advisories
+
 ## [1.11.12] - 2026-11-09
 
 Validated against Artifact Keeper 1.11.12. No management route moved (516 documented routes at
