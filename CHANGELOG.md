@@ -5,6 +5,37 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [1.11.12] - 2026-11-09
+
+Validated against Artifact Keeper 1.11.12. No management route moved (516 documented routes at
+1.11.11 and 1.11.12) and no field the provider reads or sends was removed, renamed or retyped.
+1.11.11 needed no provider change.
+
+### Changed
+
+- **`replication_mode = "pull"` is refused at plan time** on `artifactkeeper_peer_repository_subscription`
+  and `artifactkeeper_sync_policy`. Since 1.11.12 (#5293) the backend refuses it with 400: `pull` never
+  created a sync task, so those subscriptions never replicated anything. Use `push` or `mirror`.
+  Subscriptions stored as `pull` before the upgrade are left as they are, the backend names them at
+  startup.
+- `artifactkeeper_sync_policy.replication_mode` accepts `none`.
+
+### Fixed
+
+- An API error with an empty body now names the HTTP status (`status 405: Method Not Allowed`)
+  instead of ending in `status 405: `.
+- The registry landing page and README example pinned `~> 1.11.0`, `examples/complete` `~> 1.10.2`.
+
+### Upgrade notes from the backend
+
+- A peer subscription that names no `replication_mode` is stored as `push`, it was `pull` (#5293).
+- `POST /repositories` applies `quarantine_*` and `virtual_metadata_partial` (it dropped them) and
+  refuses the update-only settings with 400. The provider still sets those with a follow-up PATCH,
+  so nothing changes for it.
+- Binding a non-`gpg` signing key to a Debian, RPM or pacman repository, or turning on metadata
+  signing with one bound, is refused with 400 (#5198).
+- Peer list, discovery, label and transfer reads are admin-only (#5427).
+
 ## [1.11.10] - 2026-10-30
 
 Validated against Artifact Keeper 1.11.10. No route moved and no field the provider reads or

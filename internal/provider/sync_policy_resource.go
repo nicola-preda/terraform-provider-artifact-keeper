@@ -146,8 +146,8 @@ func (r *syncPolicyResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"replication_mode": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Replication mode: `push`, `pull`, or `mirror`. Defaults to `push`.",
-				Validators:          []validator.String{stringvalidator.OneOf("push", "pull", "mirror")},
+				MarkdownDescription: "Replication mode: `push`, `mirror`, or `none` (subscribe, do not replicate). Defaults to `push`. `pull` is refused since Artifact Keeper 1.11.12, it never replicated anything.",
+				Validators:          []validator.String{stringvalidator.OneOf("push", "mirror", "none")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"priority": schema.Int64Attribute{

@@ -78,8 +78,8 @@ func (r *peerRepositorySubscriptionResource) Schema(_ context.Context, _ resourc
 			"replication_mode": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Replication mode: one of `push`, `pull`, `mirror`, `none`. Defaults to `pull`.",
-				Validators:          []validator.String{stringvalidator.OneOf("push", "pull", "mirror", "none")},
+				MarkdownDescription: "Replication mode: `push` or `mirror` (each new artifact is sent to the peer on upload), or `none` (assigned, not replicated). Defaults to `push` since Artifact Keeper 1.11.12, which also refuses `pull`: it never replicated anything, and older backends defaulted to it.",
+				Validators:          []validator.String{stringvalidator.OneOf("push", "mirror", "none")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"replication_schedule": schema.StringAttribute{

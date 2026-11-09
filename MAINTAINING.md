@@ -37,9 +37,9 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.11.10** (2026-11-02) |
-| Provider changes needed | `allow_public_with_upstream_credentials` (repository, upstream auth), allowlist `scope`, repository data source fixed (broken since 1.11.0) |
-| Acceptance suite | run live against 1.11.10 on 2026-11-02: `main` 17/17 on vanilla, `proton-1.11.10` 18/18 on the Proton build |
+| Validated against | **Artifact Keeper 1.11.12** (2026-11-09) |
+| Provider changes needed | `replication_mode` refuses `pull` (subscription, sync policy), sync policy takes `none` |
+| Acceptance suite | run live against native builds on 2026-11-09: `main` 18/18 on vanilla 1.11.12, `proton-1.11.12` 19/19 on the Proton build |
 
 1.11.0 moved no route and removed no field the provider uses. **516 documented routes against
 470 at 1.10.2**, 46 added and none removed. The struct diff's six apparent removals are
@@ -152,8 +152,8 @@ backend bump with the procedure below.
 
 The provider version matches the Artifact Keeper version it's validated against: tag
 `vX.Y.Z` means validated against Artifact Keeper X.Y.Z and equals `ValidatedUpstreamVersion`
-(`internal/provider/provider.go`). This release is `v1.9.1`, validated against AK 1.9.1;
-consumers pin `~> 1.9.1`. The patch digit is the provider's own and may run ahead of AK, as
+(`internal/provider/provider.go`). This release is `v1.11.12`, validated against AK 1.11.12;
+consumers pin `~> 1.11.12`. The patch digit is the provider's own and may run ahead of AK, as
 it did at `v1.8.2`; note it in the changelog when it happens.
 
 Cutting a release:
@@ -592,7 +592,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.11.10 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.11.12 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh

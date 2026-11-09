@@ -22,7 +22,7 @@ resource "artifactkeeper_peer_repository_subscription" "oslo_docker" {
   repository_id = artifactkeeper_repository.docker_local.id
 
   sync_enabled         = true
-  replication_mode     = "pull" # one of: push, pull, mirror, none
+  replication_mode     = "push" # one of: push, mirror, none
   replication_schedule = "0 */6 * * *"
 
   # Optional JSON filter; omit to replicate everything.
@@ -47,7 +47,7 @@ resource "artifactkeeper_peer_repository_subscription" "oslo_docker" {
 ### Optional
 
 - `replication_filter` (String) Optional JSON object constraining which artifacts replicate, e.g. `jsonencode({ include_patterns = ["^v\\d+\\."], exclude_patterns = [".*-SNAPSHOT$"] })`. Omit to replicate everything. Use `jsonencode(...)` so the encoding matches the API's normalized form.
-- `replication_mode` (String) Replication mode: one of `push`, `pull`, `mirror`, `none`. Defaults to `pull`.
+- `replication_mode` (String) Replication mode: `push` or `mirror` (each new artifact is sent to the peer on upload), or `none` (assigned, not replicated). Defaults to `push` since Artifact Keeper 1.11.12, which also refuses `pull`: it never replicated anything, and older backends defaulted to it.
 - `replication_schedule` (String) Optional cron schedule controlling when scheduled syncs run, e.g. `0 */6 * * *`. Omit to leave unscheduled.
 - `sync_enabled` (Boolean) Whether replication is enabled for this subscription. Defaults to `true`.
 

@@ -57,7 +57,7 @@ resource "artifactkeeper_sync_policy" "prod_to_all_peers" {
 - `peer_selector` (Attributes) Selects which peer instances the policy replicates to. Omit for a policy that matches no peers. Provide at least one criterion when set. (see [below for nested schema](#nestedatt--peer_selector))
 - `precedence` (Number) Policy precedence; lower is evaluated first. Defaults to `100`.
 - `priority` (Number) Policy priority. Defaults to `0`.
-- `replication_mode` (String) Replication mode: `push`, `pull`, or `mirror`. Defaults to `push`.
+- `replication_mode` (String) Replication mode: `push`, `mirror`, or `none` (subscribe, do not replicate). Defaults to `push`. `pull` is refused since Artifact Keeper 1.11.12, it never replicated anything.
 - `repo_selector` (Attributes) Selects which repositories the policy replicates. All active criteria combine with AND semantics. Omit for a policy that matches no repositories. Provide at least one criterion when set. (see [below for nested schema](#nestedatt--repo_selector))
 
 ### Read-Only
