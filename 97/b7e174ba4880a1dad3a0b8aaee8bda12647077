@@ -1,0 +1,31 @@
+go.mod
+  h_206b40f42abaf2 3-5,70,74,76-81
+go.sum
+  h_206b40f42abaf2 207-208,232-233,237-238,244-245,249-250,263-264,273-274,278-279
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "97b7e174ba4880a1dad3a0b8aaee8bda12647077",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 11,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 9,
+    "git_diff_added_lines": 11,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "1747bec5fdffbf12638db46ffdad55c1d35f0eea"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}
