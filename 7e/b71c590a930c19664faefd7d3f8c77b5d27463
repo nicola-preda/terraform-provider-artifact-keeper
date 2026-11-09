@@ -1,0 +1,39 @@
+CHANGELOG.md
+  h_206b40f42abaf2 28-33
+MAINTAINING.md
+  h_206b40f42abaf2 42
+docs/resources/security_reviewer.md
+  h_206b40f42abaf2 1-55
+docs/resources/user_role_assignment.md
+  h_206b40f42abaf2 6,11
+examples/resources/artifactkeeper_security_reviewer/import.sh
+  h_206b40f42abaf2 1-3
+examples/resources/artifactkeeper_security_reviewer/resource.tf
+  h_206b40f42abaf2 1-15
+internal/client/security_reviewer.go
+  h_206b40f42abaf2 1-54
+internal/provider/provider.go
+  h_206b40f42abaf2 208-209
+internal/provider/provider_test.go
+  h_206b40f42abaf2 31-33
+internal/provider/security_reviewer_acc_test.go
+  h_206b40f42abaf2 1-112
+internal/provider/security_reviewer_resource.go
+  h_206b40f42abaf2 1-150
+internal/provider/security_reviewer_resource_test.go
+  h_206b40f42abaf2 1-122
+internal/provider/user_role_assignment_resource.go
+  h_206b40f42abaf2 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7eb71c590a930c19664faefd7d3f8c77b5d27463",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
