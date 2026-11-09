@@ -1,0 +1,15 @@
+CHANGELOG.md
+  h_206b40f42abaf2 19-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "99d2cb691223fbc1b64a976c5e7635856d5e3317",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
