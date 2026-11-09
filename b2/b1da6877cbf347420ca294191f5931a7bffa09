@@ -26,6 +26,20 @@ internal/provider/v1_11_12_acc_test.go
       "human_author": "Nicola Preda <nicola.preda@proton.ch>"
     }
   },
+  "commit_stats": {
+    "human_additions": 0,
+    "unknown_additions": 47,
+    "ai_additions": 83,
+    "ai_accepted": 83,
+    "git_diff_deleted_lines": 27,
+    "git_diff_added_lines": 130,
+    "tool_model_breakdown": {
+      "claude::claude-opus-5-5": {
+        "ai_additions": 83,
+        "ai_accepted": 83
+      }
+    }
+  },
   "token_usage": {
     "attributable": {
       "total": {
