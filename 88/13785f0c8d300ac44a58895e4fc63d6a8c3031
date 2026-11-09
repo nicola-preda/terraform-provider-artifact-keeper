@@ -1,0 +1,15 @@
+.proton/reviewbot/config.yaml
+  h_206b40f42abaf2 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8813785f0c8d300ac44a58895e4fc63d6a8c3031",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
