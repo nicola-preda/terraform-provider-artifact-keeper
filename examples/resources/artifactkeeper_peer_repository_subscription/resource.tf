@@ -7,7 +7,7 @@ resource "artifactkeeper_peer_repository_subscription" "oslo_docker" {
   repository_id = artifactkeeper_repository.docker_local.id
 
   sync_enabled         = true
-  replication_mode     = "pull" # one of: push, pull, mirror, none
+  replication_mode     = "push" # one of: push, mirror, none
   replication_schedule = "0 */6 * * *"
 
   # Optional JSON filter; omit to replicate everything.

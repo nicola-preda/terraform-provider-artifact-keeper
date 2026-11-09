@@ -15,8 +15,8 @@ type PeerRepositorySubscription struct {
 	PeerInstanceID string `json:"peer_instance_id"`
 	RepositoryID   string `json:"repository_id"`
 	SyncEnabled    bool   `json:"sync_enabled"`
-	// ReplicationMode is push/pull/mirror/none. Nullable; backend defaults an
-	// omitted mode to "pull" on write.
+	// ReplicationMode is push/mirror/none, or pull on a row stored before
+	// 1.11.12 refused it. Nullable, an omitted mode is stored as "push"
 	ReplicationMode     *string `json:"replication_mode"`
 	ReplicationSchedule *string `json:"replication_schedule"`
 	// ReplicationFilter is a free-form JSONB object limiting which artifacts
@@ -27,7 +27,7 @@ type PeerRepositorySubscription struct {
 }
 
 // AssignRepoRequest maps AssignRepoRequest (POST /peers/{id}/repositories). Only
-// repository_id required (sync_enabled defaults true, replication_mode "pull").
+// repository_id required (sync_enabled defaults true, replication_mode "push").
 // Upserts on (peer, repository), so re-POSTing updates in place.
 type AssignRepoRequest struct {
 	RepositoryID        string          `json:"repository_id"`
