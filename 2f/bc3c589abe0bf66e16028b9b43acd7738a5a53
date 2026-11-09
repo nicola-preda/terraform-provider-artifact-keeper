@@ -1,0 +1,29 @@
+.proton/reviewbot/config.yaml
+  h_206b40f42abaf2 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2fbc3c589abe0bf66e16028b9b43acd7738a5a53",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 4,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 0,
+    "git_diff_added_lines": 4,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "8813785f0c8d300ac44a58895e4fc63d6a8c3031"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}

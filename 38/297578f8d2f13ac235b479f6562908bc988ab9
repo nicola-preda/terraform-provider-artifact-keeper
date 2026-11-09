@@ -1,0 +1,29 @@
+internal/provider/security_reviewer_resource_test.go
+  h_206b40f42abaf2 5,35-39,43-51,64,68-73,77,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "38297578f8d2f13ac235b479f6562908bc988ab9",
+  "prompts": {},
+  "humans": {
+    "h_206b40f42abaf2": {
+      "author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "commit_stats": {
+    "human_additions": 24,
+    "unknown_additions": 0,
+    "ai_additions": 0,
+    "ai_accepted": 0,
+    "git_diff_deleted_lines": 13,
+    "git_diff_added_lines": 24,
+    "tool_model_breakdown": {}
+  },
+  "token_usage": {
+    "origins": [
+      "f6ff64b0ee291559100c7eef96578ee65207438c"
+    ]
+  },
+  "proton_build": "1.7.6-proton.8"
+}
