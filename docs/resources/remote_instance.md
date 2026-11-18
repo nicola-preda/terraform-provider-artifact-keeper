@@ -32,9 +32,16 @@ variable "mirror_api_key" {
 
 ### Required
 
-- `api_key` (String, Sensitive) API key (bearer token) used to authenticate against the remote instance. Not returned by the API. Changing this forces a new instance.
 - `name` (String) Display name for the remote instance. Changing this forces a new instance.
 - `url` (String) Base URL of the remote instance (e.g. `https://ak.example.com`). Changing this forces a new instance.
+
+### Optional
+
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
+- `api_key` (String, Sensitive) API key (bearer token) used to authenticate against the remote instance. Not returned by the API. Changing this forces a new instance. Exactly one of `api_key` and `api_key_wo` is required.
+- `api_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `api_key`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `api_key_wo_version` to send a new value.
+- `api_key_wo_version` (Number) Change this to send `api_key_wo` again, the write-only value itself is not compared between runs. Changing it forces a new resource, like `api_key`.
 
 ### Read-Only
 

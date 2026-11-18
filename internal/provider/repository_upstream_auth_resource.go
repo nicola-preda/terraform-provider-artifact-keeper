@@ -38,6 +38,8 @@ type repositoryUpstreamAuthResourceModel struct {
 	AuthType           types.String `tfsdk:"auth_type"`
 	Username           types.String `tfsdk:"username"`
 	Password           types.String `tfsdk:"password"`
+	PasswordWo         types.String `tfsdk:"password_wo"`
+	PasswordWoVersion  types.Int64  `tfsdk:"password_wo_version"`
 	Aws                types.Object `tfsdk:"aws"`
 	AllowPublic        types.Bool   `tfsdk:"allow_public_with_upstream_credentials"`
 	Configured         types.Bool   `tfsdk:"configured"`
@@ -59,6 +61,7 @@ func (r *repositoryUpstreamAuthResource) Metadata(_ context.Context, req resourc
 }
 
 func (r *repositoryUpstreamAuthResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	passwordWo, passwordWoVersion := writeOnlySecret("password", false)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Upstream credentials a remote repository uses to authenticate to its origin. The credentials themselves are write-only (the backend never returns them, so every apply re-sends `username`/`password`), but the repository object reports whether auth is configured and its type, surfaced here as `configured`/`configured_auth_type` for drift detection. Setting `auth_type` to `none` clears the auth.",
 		Attributes: map[string]schema.Attribute{
@@ -85,8 +88,10 @@ func (r *repositoryUpstreamAuthResource) Schema(_ context.Context, _ resource.Sc
 			"password": schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Password for `basic` auth or the token for `bearer` auth. Not returned by the API.",
+				MarkdownDescription: "Password for `basic` auth or the token for `bearer` auth. Not returned by the API. Conflicts with `password_wo`.",
 			},
+			"password_wo":         passwordWo,
+			"password_wo_version": passwordWoVersion,
 			"allow_public_with_upstream_credentials": schema.BoolAttribute{
 				Optional:            true,
 				MarkdownDescription: "Accept these credentials on a public repository (Artifact Keeper 1.11.1), which anonymous callers then spend upstream. Without it the write is refused with 400 `PUBLIC_REMOTE_UPSTREAM_CREDENTIALS`. Stored with the repository, the same flag as on `artifactkeeper_repository`.",
@@ -146,6 +151,7 @@ func (r *repositoryUpstreamAuthResource) Create(ctx context.Context, req resourc
 
 	repoKey := plan.RepositoryKey.ValueString()
 	authReq, diags := upstreamAuthRequestFromModel(ctx, plan)
+	authReq.Password = secretValue(ctx, req.Config, plan.Password, "password_wo", &diags)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -196,6 +202,7 @@ func (r *repositoryUpstreamAuthResource) Update(ctx context.Context, req resourc
 
 	repoKey := plan.RepositoryKey.ValueString()
 	authReq, diags := upstreamAuthRequestFromModel(ctx, plan)
+	authReq.Password = secretValue(ctx, req.Config, plan.Password, "password_wo", &diags)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

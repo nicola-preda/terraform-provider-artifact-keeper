@@ -36,15 +36,19 @@ variable "oidc_client_secret" {
 ### Required
 
 - `client_id` (String)
-- `client_secret` (String, Sensitive) OIDC client secret. Not returned by the API.
 - `issuer_url` (String) OIDC issuer/discovery URL (e.g. your Authelia base URL).
 - `name` (String) Unique display name for the provider.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `allow_legacy_rsa_keys` (Boolean) Accept legacy RSA signing keys from the IdP (RSA-SHA1). Defaults to `false`; enable only for an IdP that cannot issue modern keys.
 - `attribute_mapping` (Map of String) Claim mapping overrides (e.g. `username_claim`, `email_claim`, `groups_claim`, `admin_group`).
 - `auto_create_users` (Boolean) Auto-create users on first login. Defaults to `true`.
+- `client_secret` (String, Sensitive) OIDC client secret. Not returned by the API. Exactly one of `client_secret` and `client_secret_wo` is required.
+- `client_secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `client_secret`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `client_secret_wo_version` to send a new value.
+- `client_secret_wo_version` (Number) Change this to send `client_secret_wo` again, the write-only value itself is not compared between runs.
 - `is_enabled` (Boolean) Whether the provider is enabled. Defaults to `true`.
 - `map_groups_to_groups` (Boolean) Sync OIDC groups to Artifact Keeper groups. Defaults to `false`.
 - `pkce_enabled` (Boolean) Enable PKCE (S256). Defaults to `true`.

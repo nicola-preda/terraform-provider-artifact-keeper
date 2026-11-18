@@ -77,10 +77,7 @@ environment: `ARTIFACT_KEEPER_TOKEN`, `ARTIFACT_KEEPER_USERNAME`, `ARTIFACT_KEEP
 - **Destroying a `repository`, `user`, or `group` is irreversible.** Deleting a repository
   takes every artifact with it; guard the important ones with
   `lifecycle { prevent_destroy = true }`.
-- **Secrets are stored in state.** Credential fields are marked sensitive (masked in
-  output) but still written to state; they aren't write-only (that needs Terraform
-  1.11+/OpenTofu 1.11+, past the 1.5.7 floor). Use an encrypted backend, or OpenTofu's
-  native state encryption.
+- **Secrets are stored in state.** Credential fields are marked sensitive (masked in output) but still written to state. Caller-supplied secrets also have a write-only `<attr>_wo` alternative that never reaches plan or state, with `<attr>_wo_version` to send a new value: `repository_upstream_auth.password`, `repository_egress_proxy.proxy_url`, `sso_oidc.client_secret`, `sso_ldap.bind_password`, `user.password`, `webhook.secret`, `peer.api_key`, `remote_instance.api_key`, `migration_source.credential_token` and `credential_password`. These need Terraform 1.11+ or OpenTofu 1.11+, the plain attributes keep working on older clients down to the 1.5.7 floor. Otherwise use an encrypted backend, or OpenTofu's native state encryption.
 - **Peers show `offline`** until the backend receives heartbeats. The upstream emitter
   isn't in place yet, so that status is expected.
 

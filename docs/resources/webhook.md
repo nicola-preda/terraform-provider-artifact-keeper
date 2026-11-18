@@ -48,12 +48,16 @@ variable "webhook_secret" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `event_schema_version` (String) Pinned event payload version. Defaults to `2026-04-01`. Changing this forces a new webhook.
 - `headers` (Map of String, Sensitive) Custom HTTP headers to send with each delivery. The API returns header values redacted as `***` (1.10.2), so values are kept from state and only the set of header names is checked for drift; an imported webhook therefore plans a replacement until its headers are configured. Changing this forces a new webhook.
 - `is_enabled` (Boolean) Whether the webhook is enabled. Defaults to `true`. This is the only attribute that can be changed in place.
 - `payload_template` (String) Payload layout for the target platform. Defaults to `generic`. Changing this forces a new webhook.
 - `repository_id` (String) UUID of the repository this webhook is scoped to. Omit for a global webhook. Changing this forces a new webhook.
-- `secret` (String, Sensitive) Signing secret used to HMAC delivery bodies. If omitted, the server generates one and it is captured into state here (the API returns it only once, in the raw create response, and never again). Not returned by the API on read; preserved from state. Changing this forces a new webhook.
+- `secret` (String, Sensitive) Signing secret used to HMAC delivery bodies. If omitted, the server generates one and it is captured into state here (the API returns it only once, in the raw create response, and never again). Not returned by the API on read; preserved from state. Changing this forces a new webhook. Conflicts with `secret_wo`, which keeps a caller-supplied secret out of state.
+- `secret_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `secret`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `secret_wo_version` to send a new value.
+- `secret_wo_version` (Number) Change this to send `secret_wo` again, the write-only value itself is not compared between runs. Changing it forces a new resource, like `secret`.
 - `signing_mode` (String) How deliveries are signed (Artifact Keeper 1.11.0): `hmac` (default, with `secret`), `asymmetric` (the instance Ed25519 key, verifiable against `GET /api/v1/webhooks/jwks`), or `both`. The asymmetric modes need `AK_WEBHOOK_SECRET_KEY` on the server. Changing this forces a new webhook.
 
 ### Read-Only

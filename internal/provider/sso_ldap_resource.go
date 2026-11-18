@@ -28,29 +28,31 @@ type ssoLdapResource struct {
 }
 
 type ssoLdapResourceModel struct {
-	ID                   types.String `tfsdk:"id"`
-	Name                 types.String `tfsdk:"name"`
-	ServerURL            types.String `tfsdk:"server_url"`
-	BindDN               types.String `tfsdk:"bind_dn"`
-	BindPassword         types.String `tfsdk:"bind_password"`
-	UserBaseDN           types.String `tfsdk:"user_base_dn"`
-	UserFilter           types.String `tfsdk:"user_filter"`
-	GroupBaseDN          types.String `tfsdk:"group_base_dn"`
-	GroupFilter          types.String `tfsdk:"group_filter"`
-	EmailAttribute       types.String `tfsdk:"email_attribute"`
-	DisplayNameAttribute types.String `tfsdk:"display_name_attribute"`
-	UsernameAttribute    types.String `tfsdk:"username_attribute"`
-	GroupsAttribute      types.String `tfsdk:"groups_attribute"`
-	AdminGroupDN         types.String `tfsdk:"admin_group_dn"`
-	UseStartTLS          types.Bool   `tfsdk:"use_starttls"`
-	InsecureSkipVerify   types.Bool   `tfsdk:"insecure_skip_verify"`
-	CaCertificate        types.String `tfsdk:"ca_certificate"`
-	HasCaCertificate     types.Bool   `tfsdk:"has_ca_certificate"`
-	IsEnabled            types.Bool   `tfsdk:"is_enabled"`
-	Priority             types.Int64  `tfsdk:"priority"`
-	HasBindPassword      types.Bool   `tfsdk:"has_bind_password"`
-	CreatedAt            types.String `tfsdk:"created_at"`
-	UpdatedAt            types.String `tfsdk:"updated_at"`
+	ID                    types.String `tfsdk:"id"`
+	Name                  types.String `tfsdk:"name"`
+	ServerURL             types.String `tfsdk:"server_url"`
+	BindDN                types.String `tfsdk:"bind_dn"`
+	BindPassword          types.String `tfsdk:"bind_password"`
+	BindPasswordWo        types.String `tfsdk:"bind_password_wo"`
+	BindPasswordWoVersion types.Int64  `tfsdk:"bind_password_wo_version"`
+	UserBaseDN            types.String `tfsdk:"user_base_dn"`
+	UserFilter            types.String `tfsdk:"user_filter"`
+	GroupBaseDN           types.String `tfsdk:"group_base_dn"`
+	GroupFilter           types.String `tfsdk:"group_filter"`
+	EmailAttribute        types.String `tfsdk:"email_attribute"`
+	DisplayNameAttribute  types.String `tfsdk:"display_name_attribute"`
+	UsernameAttribute     types.String `tfsdk:"username_attribute"`
+	GroupsAttribute       types.String `tfsdk:"groups_attribute"`
+	AdminGroupDN          types.String `tfsdk:"admin_group_dn"`
+	UseStartTLS           types.Bool   `tfsdk:"use_starttls"`
+	InsecureSkipVerify    types.Bool   `tfsdk:"insecure_skip_verify"`
+	CaCertificate         types.String `tfsdk:"ca_certificate"`
+	HasCaCertificate      types.Bool   `tfsdk:"has_ca_certificate"`
+	IsEnabled             types.Bool   `tfsdk:"is_enabled"`
+	Priority              types.Int64  `tfsdk:"priority"`
+	HasBindPassword       types.Bool   `tfsdk:"has_bind_password"`
+	CreatedAt             types.String `tfsdk:"created_at"`
+	UpdatedAt             types.String `tfsdk:"updated_at"`
 }
 
 func (r *ssoLdapResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -62,32 +64,35 @@ func (r *ssoLdapResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		return schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: desc,
 			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}
 	}
+	bindPasswordWo, bindPasswordWoVersion := writeOnlySecret("bind_password", false)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "An LDAP single sign-on provider.",
 		Attributes: map[string]schema.Attribute{
-			"id":                     schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
-			"name":                   schema.StringAttribute{Required: true, MarkdownDescription: "Unique provider name."},
-			"server_url":             schema.StringAttribute{Required: true, MarkdownDescription: "LDAP server URL, e.g. `ldaps://ldap.example.com:636`."},
-			"bind_dn":                schema.StringAttribute{Optional: true, MarkdownDescription: "Service account DN for search-then-bind."},
-			"bind_password":          schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Password for bind_dn. Not returned by the API."},
-			"user_base_dn":           schema.StringAttribute{Required: true, MarkdownDescription: "Base DN for user search."},
-			"user_filter":            optComputedStr("User search filter. Defaults to `(uid={0})`."),
-			"group_base_dn":          schema.StringAttribute{Optional: true},
-			"group_filter":           schema.StringAttribute{Optional: true},
-			"email_attribute":        optComputedStr("Defaults to `mail`."),
-			"display_name_attribute": optComputedStr("Defaults to `cn`."),
-			"username_attribute":     optComputedStr("Defaults to `uid`."),
-			"groups_attribute":       optComputedStr("Defaults to `memberOf`."),
-			"admin_group_dn":         schema.StringAttribute{Optional: true, MarkdownDescription: "DN of the group mapped to admin."},
-			"use_starttls":           schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
-			"insecure_skip_verify":   schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Skip TLS certificate verification of the LDAP server. **Insecure**; dev/trusted networks only. Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
-			"ca_certificate":         schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "PEM CA bundle used to verify the LDAP server's certificate. Write-only, the API never returns it (see `has_ca_certificate`). Set `\"\"` to clear."},
-			"has_ca_certificate":     schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether a CA certificate is configured."},
-			"is_enabled":             schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `true`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
-			"priority":               schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "Precedence among LDAP providers. Defaults to `0`.", PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}},
-			"has_bind_password":      schema.BoolAttribute{Computed: true},
-			"created_at":             schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
-			"updated_at":             schema.StringAttribute{Computed: true},
+			"id":                       schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+			"name":                     schema.StringAttribute{Required: true, MarkdownDescription: "Unique provider name."},
+			"server_url":               schema.StringAttribute{Required: true, MarkdownDescription: "LDAP server URL, e.g. `ldaps://ldap.example.com:636`."},
+			"bind_dn":                  schema.StringAttribute{Optional: true, MarkdownDescription: "Service account DN for search-then-bind."},
+			"bind_password":            schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Password for bind_dn. Not returned by the API. Conflicts with `bind_password_wo`."},
+			"bind_password_wo":         bindPasswordWo,
+			"bind_password_wo_version": bindPasswordWoVersion,
+			"user_base_dn":             schema.StringAttribute{Required: true, MarkdownDescription: "Base DN for user search."},
+			"user_filter":              optComputedStr("User search filter. Defaults to `(uid={0})`."),
+			"group_base_dn":            schema.StringAttribute{Optional: true},
+			"group_filter":             schema.StringAttribute{Optional: true},
+			"email_attribute":          optComputedStr("Defaults to `mail`."),
+			"display_name_attribute":   optComputedStr("Defaults to `cn`."),
+			"username_attribute":       optComputedStr("Defaults to `uid`."),
+			"groups_attribute":         optComputedStr("Defaults to `memberOf`."),
+			"admin_group_dn":           schema.StringAttribute{Optional: true, MarkdownDescription: "DN of the group mapped to admin."},
+			"use_starttls":             schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
+			"insecure_skip_verify":     schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Skip TLS certificate verification of the LDAP server. **Insecure**; dev/trusted networks only. Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
+			"ca_certificate":           schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "PEM CA bundle used to verify the LDAP server's certificate. Write-only, the API never returns it (see `has_ca_certificate`). Set `\"\"` to clear."},
+			"has_ca_certificate":       schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether a CA certificate is configured."},
+			"is_enabled":               schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `true`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
+			"priority":                 schema.Int64Attribute{Optional: true, Computed: true, MarkdownDescription: "Precedence among LDAP providers. Defaults to `0`.", PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}},
+			"has_bind_password":        schema.BoolAttribute{Computed: true},
+			"created_at":               schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+			"updated_at":               schema.StringAttribute{Computed: true},
 		},
 	}
 }
@@ -102,13 +107,19 @@ func (r *ssoLdapResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cfg, err := r.client.CreateLdapConfig(ctx, ldapRequestFromModel(plan))
+	apiReq := ldapRequestFromModel(plan)
+	apiReq.BindPassword = secretValue(ctx, req.Config, plan.BindPassword, "bind_password_wo", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	cfg, err := r.client.CreateLdapConfig(ctx, apiReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating LDAP provider", err.Error())
 		return
 	}
 	state := ldapToModel(cfg)
 	state.BindPassword = plan.BindPassword
+	state.BindPasswordWoVersion = plan.BindPasswordWoVersion
 	state.CaCertificate = plan.CaCertificate
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -130,23 +141,31 @@ func (r *ssoLdapResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	refreshed := ldapToModel(cfg)
 	refreshed.BindPassword = state.BindPassword
+	refreshed.BindPasswordWoVersion = state.BindPasswordWoVersion
 	refreshed.CaCertificate = state.CaCertificate
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
 func (r *ssoLdapResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ssoLdapResourceModel
+	var plan, prior ssoLdapResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cfg, err := r.client.UpdateLdapConfig(ctx, plan.ID.ValueString(), ldapRequestFromModel(plan))
+	apiReq := ldapRequestFromModel(plan)
+	apiReq.BindPassword = updatedSecret(ctx, req.Config, plan.BindPassword, prior.BindPassword, plan.BindPasswordWoVersion, prior.BindPasswordWoVersion, "bind_password_wo", &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	cfg, err := r.client.UpdateLdapConfig(ctx, plan.ID.ValueString(), apiReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating LDAP provider", err.Error())
 		return
 	}
 	state := ldapToModel(cfg)
 	state.BindPassword = plan.BindPassword
+	state.BindPasswordWoVersion = plan.BindPasswordWoVersion
 	state.CaCertificate = plan.CaCertificate
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }

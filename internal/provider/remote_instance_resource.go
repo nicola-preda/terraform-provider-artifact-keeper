@@ -3,11 +3,13 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
@@ -26,11 +28,13 @@ type remoteInstanceResource struct {
 }
 
 type remoteInstanceResourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	URL       types.String `tfsdk:"url"`
-	APIKey    types.String `tfsdk:"api_key"`
-	CreatedAt types.String `tfsdk:"created_at"`
+	ID              types.String `tfsdk:"id"`
+	Name            types.String `tfsdk:"name"`
+	URL             types.String `tfsdk:"url"`
+	APIKey          types.String `tfsdk:"api_key"`
+	APIKeyWo        types.String `tfsdk:"api_key_wo"`
+	APIKeyWoVersion types.Int64  `tfsdk:"api_key_wo_version"`
+	CreatedAt       types.String `tfsdk:"created_at"`
 }
 
 func (r *remoteInstanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -38,6 +42,7 @@ func (r *remoteInstanceResource) Metadata(_ context.Context, req resource.Metada
 }
 
 func (r *remoteInstanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	apiKeyWo, apiKeyWoVersion := writeOnlySecret("api_key", true)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "A registered remote Artifact Keeper instance that this instance can proxy requests to. Owned by the authenticating user. The API has no update endpoint, so changing any field forces a new instance, and the API key is not returned.",
 		Attributes: map[string]schema.Attribute{
@@ -57,11 +62,14 @@ func (r *remoteInstanceResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"api_key": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "API key (bearer token) used to authenticate against the remote instance. Not returned by the API. Changing this forces a new instance.",
+				MarkdownDescription: "API key (bearer token) used to authenticate against the remote instance. Not returned by the API. Changing this forces a new instance. Exactly one of `api_key` and `api_key_wo` is required.",
+				Validators:          []validator.String{stringvalidator.ExactlyOneOf(path.MatchRoot("api_key_wo"))},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"api_key_wo":         apiKeyWo,
+			"api_key_wo_version": apiKeyWoVersion,
 			"created_at": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "RFC 3339 creation timestamp.",
@@ -82,11 +90,17 @@ func (r *remoteInstanceResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	inst, err := r.client.CreateRemoteInstance(ctx, client.CreateRemoteInstanceRequest{
-		Name:   plan.Name.ValueString(),
-		URL:    plan.URL.ValueString(),
-		APIKey: plan.APIKey.ValueString(),
-	})
+	createReq := client.CreateRemoteInstanceRequest{
+		Name: plan.Name.ValueString(),
+		URL:  plan.URL.ValueString(),
+	}
+	if apiKey := secretValue(ctx, req.Config, plan.APIKey, "api_key_wo", &resp.Diagnostics); apiKey != nil {
+		createReq.APIKey = *apiKey
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	inst, err := r.client.CreateRemoteInstance(ctx, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating remote instance", err.Error())
 		return
@@ -94,6 +108,7 @@ func (r *remoteInstanceResource) Create(ctx context.Context, req resource.Create
 
 	state := remoteInstanceToModel(inst)
 	state.APIKey = plan.APIKey
+	state.APIKeyWoVersion = plan.APIKeyWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -116,6 +131,7 @@ func (r *remoteInstanceResource) Read(ctx context.Context, req resource.ReadRequ
 
 	refreshed := remoteInstanceToModel(inst)
 	refreshed.APIKey = state.APIKey
+	refreshed.APIKeyWoVersion = state.APIKeyWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 

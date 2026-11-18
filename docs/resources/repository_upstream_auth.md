@@ -39,9 +39,13 @@ variable "upstream_password" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `allow_public_with_upstream_credentials` (Boolean) Accept these credentials on a public repository (Artifact Keeper 1.11.1), which anonymous callers then spend upstream. Without it the write is refused with 400 `PUBLIC_REMOTE_UPSTREAM_CREDENTIALS`. Stored with the repository, the same flag as on `artifactkeeper_repository`.
 - `aws` (Attributes) Provider settings for the dynamic AWS auth types, required for `aws_ecr` and `aws_codeartifact` and ignored otherwise. Carries no secret: the AWS identity comes from the backend process's own credential chain (IRSA, EKS Pod Identity, instance profile or static `AWS_*` variables), so there is nothing here to read back and the block is re-sent on every apply like the credentials are. (see [below for nested schema](#nestedatt--aws))
-- `password` (String, Sensitive) Password for `basic` auth or the token for `bearer` auth. Not returned by the API.
+- `password` (String, Sensitive) Password for `basic` auth or the token for `bearer` auth. Not returned by the API. Conflicts with `password_wo`.
+- `password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `password`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `password_wo_version` to send a new value.
+- `password_wo_version` (Number) Change this to send `password_wo` again, the write-only value itself is not compared between runs.
 - `username` (String, Sensitive) Username for `basic` auth. Not returned by the API.
 
 ### Read-Only

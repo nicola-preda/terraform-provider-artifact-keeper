@@ -28,16 +28,20 @@ type migrationSourceResource struct {
 }
 
 type migrationSourceResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	URL                types.String `tfsdk:"url"`
-	AuthType           types.String `tfsdk:"auth_type"`
-	SourceType         types.String `tfsdk:"source_type"`
-	CredentialToken    types.String `tfsdk:"credential_token"`
-	CredentialUsername types.String `tfsdk:"credential_username"`
-	CredentialPassword types.String `tfsdk:"credential_password"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	VerifiedAt         types.String `tfsdk:"verified_at"`
+	ID                          types.String `tfsdk:"id"`
+	Name                        types.String `tfsdk:"name"`
+	URL                         types.String `tfsdk:"url"`
+	AuthType                    types.String `tfsdk:"auth_type"`
+	SourceType                  types.String `tfsdk:"source_type"`
+	CredentialToken             types.String `tfsdk:"credential_token"`
+	CredentialTokenWo           types.String `tfsdk:"credential_token_wo"`
+	CredentialTokenWoVersion    types.Int64  `tfsdk:"credential_token_wo_version"`
+	CredentialUsername          types.String `tfsdk:"credential_username"`
+	CredentialPassword          types.String `tfsdk:"credential_password"`
+	CredentialPasswordWo        types.String `tfsdk:"credential_password_wo"`
+	CredentialPasswordWoVersion types.Int64  `tfsdk:"credential_password_wo_version"`
+	CreatedAt                   types.String `tfsdk:"created_at"`
+	VerifiedAt                  types.String `tfsdk:"verified_at"`
 }
 
 func (r *migrationSourceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -45,6 +49,8 @@ func (r *migrationSourceResource) Metadata(_ context.Context, req resource.Metad
 }
 
 func (r *migrationSourceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	tokenWo, tokenWoVersion := writeOnlySecret("credential_token", true)
+	passwordWo, passwordWoVersion := writeOnlySecret("credential_password", true)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "A persistent migration source connection (e.g. a Nexus or Artifactory instance) used to import repositories and artifacts. Credentials are not returned by the API. The API has no update endpoint, so changes force a new connection. Running a migration is a separate imperative operation, not managed here.",
 		Attributes: map[string]schema.Attribute{
@@ -77,9 +83,11 @@ func (r *migrationSourceResource) Schema(_ context.Context, _ resource.SchemaReq
 			"credential_token": schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "API token for `api_token` auth. Not returned by the API.",
+				MarkdownDescription: "API token for `api_token` auth. Not returned by the API. Conflicts with `credential_token_wo`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"credential_token_wo":         tokenWo,
+			"credential_token_wo_version": tokenWoVersion,
 			"credential_username": schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
@@ -89,9 +97,11 @@ func (r *migrationSourceResource) Schema(_ context.Context, _ resource.SchemaReq
 			"credential_password": schema.StringAttribute{
 				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Password for `basic_auth`. Not returned by the API.",
+				MarkdownDescription: "Password for `basic_auth`. Not returned by the API. Conflicts with `credential_password_wo`.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"credential_password_wo":         passwordWo,
+			"credential_password_wo_version": passwordWoVersion,
 			"created_at": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -117,10 +127,13 @@ func (r *migrationSourceResource) Create(ctx context.Context, req resource.Creat
 		URL:      plan.URL.ValueString(),
 		AuthType: plan.AuthType.ValueString(),
 		Credentials: client.MigrationCredentials{
-			Token:    optionalString(plan.CredentialToken),
+			Token:    secretValue(ctx, req.Config, plan.CredentialToken, "credential_token_wo", &resp.Diagnostics),
 			Username: optionalString(plan.CredentialUsername),
-			Password: optionalString(plan.CredentialPassword),
+			Password: secretValue(ctx, req.Config, plan.CredentialPassword, "credential_password_wo", &resp.Diagnostics),
 		},
+	}
+	if resp.Diagnostics.HasError() {
+		return
 	}
 	if !plan.SourceType.IsNull() && !plan.SourceType.IsUnknown() {
 		createReq.SourceType = plan.SourceType.ValueStringPointer()
@@ -136,6 +149,8 @@ func (r *migrationSourceResource) Create(ctx context.Context, req resource.Creat
 	state.CredentialToken = plan.CredentialToken
 	state.CredentialUsername = plan.CredentialUsername
 	state.CredentialPassword = plan.CredentialPassword
+	state.CredentialTokenWoVersion = plan.CredentialTokenWoVersion
+	state.CredentialPasswordWoVersion = plan.CredentialPasswordWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -160,6 +175,8 @@ func (r *migrationSourceResource) Read(ctx context.Context, req resource.ReadReq
 	refreshed.CredentialToken = state.CredentialToken
 	refreshed.CredentialUsername = state.CredentialUsername
 	refreshed.CredentialPassword = state.CredentialPassword
+	refreshed.CredentialTokenWoVersion = state.CredentialTokenWoVersion
+	refreshed.CredentialPasswordWoVersion = state.CredentialPasswordWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 

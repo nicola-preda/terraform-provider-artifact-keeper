@@ -59,6 +59,21 @@ func TestEgressProxyToModelKeepsConfiguredURL(t *testing.T) {
 		}
 	})
 
+	t.Run("proxy_url_wo keeps the redacted URL out of state", func(t *testing.T) {
+		m := egressProxyToModel(repositoryEgressProxyResourceModel{
+			RepositoryKey:     types.StringValue("npm-remote"),
+			Mode:              types.StringValue("explicit"),
+			ProxyURL:          types.StringNull(),
+			ProxyURLWoVersion: types.Int64Value(2),
+		}, &client.EgressProxy{Mode: "explicit", ProxyURL: ptr("http://***@proxy:3128/"), ProxyCredentialsConfigured: true})
+		if !m.ProxyURL.IsNull() {
+			t.Errorf("proxy_url = %v, want null in write-only mode", m.ProxyURL)
+		}
+		if m.ProxyURLWoVersion.ValueInt64() != 2 {
+			t.Errorf("proxy_url_wo_version = %v, want 2 carried over", m.ProxyURLWoVersion)
+		}
+	})
+
 	t.Run("id mirrors the repository key", func(t *testing.T) {
 		m := egressProxyToModel(configured("http://proxy:3128"), &client.EgressProxy{Mode: "inherit"})
 		if m.ID.ValueString() != "npm-remote" {
