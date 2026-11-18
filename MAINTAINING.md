@@ -37,9 +37,11 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.12.0** (2026-11-18) |
-| Provider changes needed | `system_settings` stops sending `allow_anonymous_download` (removed in 1.12.0, a 400 when sent) |
-| Acceptance suite | run live against the `ghcr.io` 1.12.0 image with `docker-compose.test.yml` on 2026-11-18: 18/18 |
+| Validated against | **Artifact Keeper 1.12.1** (2026-11-18) |
+| Provider changes needed | none, 1.12.1 is 1.12.0 plus the Windows build fix (`services/oci_rootfs.rs`) and a dependency update |
+| Acceptance suite | run live against the `ghcr.io` 1.12.1 image with `docker-compose.test.yml` on 2026-11-18: 20/20 |
+
+1.12.1 (one commit over 1.12.0) touches no handler, model, route or migration, only `services/oci_rootfs.rs`, the OpenAPI version string, release files and `Cargo.lock`.
 
 1.12.0 (479 commits over 1.11.12) moved or removed no route the provider calls, 148 documented routes were added. The struct diff's 13 apparent removals are retypes to `Option` (`UpdateRepositoryRequest.description` and `quota_bytes` became `Option<Option<…>>`, so `null` clears them, score `grade` became nullable, `download_count` optional), internal rows, and the one real removal: `SystemSettings.allow_anonymous_download` (#5652), which `POST /admin/settings` now refuses with 400. `max_upload_size_bytes` there is the `MAX_UPLOAD_SIZE` in force and read-only. `DELETE /repositories/{key}` answers 202 with a job (#4311), which the client already treats as success.
 
@@ -594,7 +596,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.12.0 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.12.1 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh

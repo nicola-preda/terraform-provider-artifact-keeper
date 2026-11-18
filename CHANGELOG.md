@@ -7,6 +7,10 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-11-18
+
+Validated against Artifact Keeper 1.12.1, which is 1.12.0 plus the Windows build fix and a dependency update. No route, request or response the provider uses changed, so 1.12.0 and 1.12.1 both work with this release.
+
 ### Fixed
 
 - **`artifactkeeper_repository_upstream_filter` failed with "Provider produced inconsistent result after apply" when `include_patterns` or `exclude_patterns` was `[]`** (#7). The API answers `[]` for an empty and an unset list alike and the provider read both back as null, it now keeps what the config says
