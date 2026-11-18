@@ -16,8 +16,6 @@ Instance-wide Artifact Keeper settings, a singleton (one record always exists; n
 # System settings are a singleton: exactly one record always exists on the
 # server. Declare a single instance to manage the tunable values.
 resource "artifactkeeper_system_settings" "this" {
-  allow_anonymous_download     = false
-  max_upload_size_bytes        = 104857600 # 100 MiB
   retention_days               = 365
   audit_retention_days         = 90
   backup_retention_count       = 10
@@ -30,11 +28,11 @@ resource "artifactkeeper_system_settings" "this" {
 
 ### Optional
 
-- `allow_anonymous_download` (Boolean) Whether unauthenticated clients may download artifacts.
+- `allow_anonymous_download` (Boolean, Deprecated) Whether unauthenticated clients may download artifacts. Never enforced by the backend and removed in Artifact Keeper 1.12, which refuses it with `400`: anonymous access is `guest_access_enabled` on `artifactkeeper_runtime_settings`. Null when the backend no longer reports it.
 - `audit_retention_days` (Number) Number of days audit-log entries are retained.
 - `backup_retention_count` (Number) Number of backups to keep before pruning the oldest.
 - `edge_stale_threshold_minutes` (Number) Minutes after which an edge node is considered stale.
-- `max_upload_size_bytes` (Number) Maximum artifact upload size, in bytes.
+- `max_upload_size_bytes` (Number) Maximum artifact upload size, in bytes. From Artifact Keeper 1.12 this is the `MAX_UPLOAD_SIZE` limit in force and read-only: a value other than the current one is refused with `400`.
 - `retention_days` (Number) Number of days artifacts are retained.
 
 ### Read-Only

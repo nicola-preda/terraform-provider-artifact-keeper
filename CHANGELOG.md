@@ -5,6 +5,19 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+Validated against Artifact Keeper 1.12.0. No management route the provider calls moved, and the only consumed field removed is `allow_anonymous_download` on `/admin/settings` (#5652).
+
+### Fixed
+
+- **`artifactkeeper_system_settings` failed every apply against 1.12.0** with 400 `allow_anonymous_download was never enforced and has been removed`. The provider sent the field on every write, it now sends it only when the backend still reports it or the config sets it. The attribute is deprecated and reads null on 1.12.0, anonymous access is `guest_access_enabled` on `artifactkeeper_runtime_settings`.
+
+### Upgrade notes from the backend
+
+- `max_upload_size_bytes` on `artifactkeeper_system_settings` is read-only from 1.12.0 (`MAX_UPLOAD_SIZE`), a value other than the one in force is refused with 400.
+- Quality gates and promotion rules created on 1.12.0 default to `accepted_grade_status = rated` and fail closed on a repository that is not fully assessed, existing ones keep `any`. The provider does not model the field yet.
+
 ## [1.11.12] - 2026-11-09
 
 Validated against Artifact Keeper 1.11.12. No management route moved (516 documented routes at
