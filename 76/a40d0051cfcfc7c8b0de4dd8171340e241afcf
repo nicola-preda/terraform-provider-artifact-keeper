@@ -24,6 +24,20 @@ internal/provider/system_settings_resource.go
       "human_author": "Nicola Preda <nicola.preda@proton.ch>"
     }
   },
+  "commit_stats": {
+    "human_additions": 0,
+    "unknown_additions": 0,
+    "ai_additions": 88,
+    "ai_accepted": 88,
+    "git_diff_deleted_lines": 13,
+    "git_diff_added_lines": 88,
+    "tool_model_breakdown": {
+      "claude::claude-opus-5-5": {
+        "ai_additions": 88,
+        "ai_accepted": 88
+      }
+    }
+  },
   "token_usage": {
     "carried": {
       "total": {
@@ -41,6 +55,11 @@ internal/provider/system_settings_resource.go
         }
       }
     }
+  },
+  "activity": {
+    "added_sloc": 69,
+    "checkpoints": 2,
+    "span_seconds": 539
   },
   "proton_build": "1.7.6-proton.8"
 }
