@@ -1,0 +1,56 @@
+CHANGELOG.md
+  s_7295de5a5caaa6::t_e55af14a87161f 14
+internal/provider/ci_oidc_mapping_resource.go
+  s_7295de5a5caaa6::t_96d8debbfa5f84 151,175,235,283-287
+internal/provider/empty_collections_test.go
+  s_7295de5a5caaa6::t_3476879843314c 1-228
+internal/provider/helpers.go
+  s_7295de5a5caaa6::t_8edde1320d83f0 51-58
+internal/provider/promotion_rule_resource.go
+  s_7295de5a5caaa6::t_0d6bfa640d30fa 168,191,245,283-286
+internal/provider/repository_allowlist_resource.go
+  s_7295de5a5caaa6::t_7eb194134b7b2d 127,166,212-231
+internal/provider/repository_npm_scope_policy_resource.go
+  s_7295de5a5caaa6::t_a1ac33319e1bb2 107,131,161,204-207
+internal/provider/repository_resource.go
+  s_7295de5a5caaa6::t_c9a7f200792c00 587,627,773
+internal/provider/sync_policy_resource.go
+  s_7295de5a5caaa6::t_6f25a8ea4f3515 233,256,281,516-558
+internal/provider/webhook_resource.go
+  s_7295de5a5caaa6::t_4cb1091dd2405f 211,246,277,334-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "abc065691a8b383a8cc9fb077d4fe670b69d6775",
+  "prompts": {},
+  "sessions": {
+    "s_7295de5a5caaa6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c56cd63b-ec7b-4cb0-bc81-e8eb3a40f352",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "token_usage": {
+    "carried": {
+      "total": {
+        "input_tokens": 6,
+        "output_tokens": 986,
+        "cache_creation_input_tokens": 1713,
+        "cache_read_input_tokens": 546403
+      },
+      "by_tool_model": {
+        "claude::claude-opus-5-5": {
+          "input_tokens": 6,
+          "output_tokens": 986,
+          "cache_creation_input_tokens": 1713,
+          "cache_read_input_tokens": 546403
+        }
+      }
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
