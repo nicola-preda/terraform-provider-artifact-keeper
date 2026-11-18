@@ -47,7 +47,7 @@ terraform {
   required_providers {
     artifactkeeper = {
       source  = "nicola-preda/artifact-keeper"
-      version = "~> 1.11.12"
+      version = "~> 1.12.0"
     }
   }
 }
@@ -103,8 +103,8 @@ provider "artifactkeeper" {
 
 The provider version tracks the Artifact Keeper version it's validated against, and every
 release's acceptance suite is run against that exact backend image. The patch digit is the
-provider's own, so it can run ahead: `v1.11.12` is the current release and targets Artifact
-Keeper 1.11.12. Pin with `~> 1.11.12`.
+provider's own, so it can run ahead: `v1.12.0` is the current release and targets Artifact
+Keeper 1.12.0. Pin with `~> 1.12.0`.
 
 `1.8.0` and `1.8.1` were published and withdrawn; neither installs. See the changelog.
 
