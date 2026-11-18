@@ -43,9 +43,15 @@ variable "nexus_password" {
 
 ### Optional
 
-- `credential_password` (String, Sensitive) Password for `basic_auth`. Not returned by the API.
-- `credential_token` (String, Sensitive) API token for `api_token` auth. Not returned by the API.
-- `credential_username` (String, Sensitive) Username for `basic_auth`. Not returned by the API.
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
+- `credential_password` (String, Sensitive) Password for `basic_auth`. Not returned by the API. Conflicts with `credential_password_wo`.
+- `credential_password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `credential_password`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `credential_password_wo_version` to send a new value.
+- `credential_password_wo_version` (Number) Change this to send `credential_password_wo` again, the write-only value itself is not compared between runs. Changing it forces a new resource, like `credential_password`.
+- `credential_token` (String, Sensitive) API token for `api_token` auth. Not returned by the API. Conflicts with `credential_token_wo`.
+- `credential_token_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `credential_token`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `credential_token_wo_version` to send a new value.
+- `credential_token_wo_version` (Number) Change this to send `credential_token_wo` again, the write-only value itself is not compared between runs. Changing it forces a new resource, like `credential_token`.
+- `credential_username` (String) Username for `basic_auth`. Not returned by the API.
 - `source_type` (String) Source registry type: `nexus` or `artifactory`. Defaults to `artifactory`.
 
 ### Read-Only

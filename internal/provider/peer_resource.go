@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
@@ -34,6 +36,8 @@ type peerResourceModel struct {
 	Region          types.String `tfsdk:"region"`
 	CacheSizeBytes  types.Int64  `tfsdk:"cache_size_bytes"`
 	APIKey          types.String `tfsdk:"api_key"`
+	APIKeyWo        types.String `tfsdk:"api_key_wo"`
+	APIKeyWoVersion types.Int64  `tfsdk:"api_key_wo_version"`
 	Status          types.String `tfsdk:"status"`
 	CacheUsedBytes  types.Int64  `tfsdk:"cache_used_bytes"`
 	LastHeartbeatAt types.String `tfsdk:"last_heartbeat_at"`
@@ -47,6 +51,7 @@ func (r *peerResource) Metadata(_ context.Context, req resource.MetadataRequest,
 }
 
 func (r *peerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	apiKeyWo, apiKeyWoVersion := writeOnlySecret("api_key", true)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Registers a remote peer instance for replication. The API has no update endpoint, so any change forces a new peer. Note: a peer's `status` only becomes `online` once the backend receives heartbeats from it.",
 		Attributes: map[string]schema.Attribute{
@@ -76,15 +81,18 @@ func (r *peerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace(), int64planmodifier.UseStateForUnknown()},
 			},
 			"api_key": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "API token (Bearer) the local instance uses to authenticate to this peer. Should be an admin-scoped token issued on the remote peer.",
+				MarkdownDescription: "API token (Bearer) the local instance uses to authenticate to this peer. Should be an admin-scoped token issued on the remote peer. Exactly one of `api_key` and `api_key_wo` is required.",
+				Validators:          []validator.String{stringvalidator.ExactlyOneOf(path.MatchRoot("api_key_wo"))},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"status":            schema.StringAttribute{Computed: true, MarkdownDescription: "online, offline, syncing, or degraded."},
-			"cache_used_bytes":  schema.Int64Attribute{Computed: true},
-			"last_heartbeat_at": schema.StringAttribute{Computed: true},
-			"last_sync_at":      schema.StringAttribute{Computed: true},
+			"api_key_wo":         apiKeyWo,
+			"api_key_wo_version": apiKeyWoVersion,
+			"status":             schema.StringAttribute{Computed: true, MarkdownDescription: "online, offline, syncing, or degraded."},
+			"cache_used_bytes":   schema.Int64Attribute{Computed: true},
+			"last_heartbeat_at":  schema.StringAttribute{Computed: true},
+			"last_sync_at":       schema.StringAttribute{Computed: true},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -111,7 +119,12 @@ func (r *peerResource) Create(ctx context.Context, req resource.CreateRequest, r
 	createReq := client.RegisterPeerRequest{
 		Name:        plan.Name.ValueString(),
 		EndpointURL: plan.EndpointURL.ValueString(),
-		APIKey:      plan.APIKey.ValueString(),
+	}
+	if apiKey := secretValue(ctx, req.Config, plan.APIKey, "api_key_wo", &resp.Diagnostics); apiKey != nil {
+		createReq.APIKey = *apiKey
+	}
+	if resp.Diagnostics.HasError() {
+		return
 	}
 	if !plan.Region.IsNull() {
 		createReq.Region = plan.Region.ValueStringPointer()
@@ -128,6 +141,7 @@ func (r *peerResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	state := peerToModel(peer)
 	state.APIKey = plan.APIKey // API never returns it; preserved from config
+	state.APIKeyWoVersion = plan.APIKeyWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -150,6 +164,7 @@ func (r *peerResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	refreshed := peerToModel(peer)
 	refreshed.APIKey = state.APIKey // preserved; never returned by the API
+	refreshed.APIKeyWoVersion = state.APIKeyWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 

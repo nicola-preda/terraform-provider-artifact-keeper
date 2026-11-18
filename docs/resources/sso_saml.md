@@ -27,7 +27,7 @@ resource "artifactkeeper_sso_saml" "okta" {
 
 ### Required
 
-- `certificate` (String, Sensitive) IdP certificate (PEM). Not returned by the API.
+- `certificate` (String) IdP certificate (PEM). Not returned by the API.
 - `entity_id` (String) SAML IdP entity ID.
 - `name` (String) Unique provider name.
 - `sso_url` (String) IdP SSO endpoint URL.

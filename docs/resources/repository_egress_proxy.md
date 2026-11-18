@@ -40,8 +40,12 @@ resource "artifactkeeper_repository_egress_proxy" "pypi_proxy" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `no_proxy` (String) Comma-separated hosts, domain suffixes or CIDRs that bypass the proxy for this repository. Only meaningful when `mode` is `explicit`.
-- `proxy_url` (String, Sensitive) Proxy to use, `http://` or `https://` (socks is rejected), optionally carrying `user:pass@` credentials. Required when `mode` is `explicit`, and rejected for the other modes rather than silently dropped. The API returns this with any credentials replaced by `***`, so a credentialed URL is kept from configuration rather than read back.
+- `proxy_url` (String, Sensitive) Proxy to use, `http://` or `https://` (socks is rejected), optionally carrying `user:pass@` credentials. Required when `mode` is `explicit`, and rejected for the other modes rather than silently dropped. The API returns this with any credentials replaced by `***`, so a credentialed URL is kept from configuration rather than read back. Conflicts with `proxy_url_wo`.
+- `proxy_url_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `proxy_url`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `proxy_url_wo_version` to send a new value.
+- `proxy_url_wo_version` (Number) Change this to send `proxy_url_wo` again, the write-only value itself is not compared between runs.
 
 ### Read-Only
 

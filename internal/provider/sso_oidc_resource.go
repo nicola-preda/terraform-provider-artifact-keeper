@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -32,21 +33,23 @@ type ssoOidcResource struct {
 }
 
 type ssoOidcResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	IssuerURL          types.String `tfsdk:"issuer_url"`
-	ClientID           types.String `tfsdk:"client_id"`
-	ClientSecret       types.String `tfsdk:"client_secret"`
-	Scopes             types.List   `tfsdk:"scopes"`
-	AttributeMapping   types.Map    `tfsdk:"attribute_mapping"`
-	IsEnabled          types.Bool   `tfsdk:"is_enabled"`
-	AutoCreateUsers    types.Bool   `tfsdk:"auto_create_users"`
-	PkceEnabled        types.Bool   `tfsdk:"pkce_enabled"`
-	MapGroupsToGroups  types.Bool   `tfsdk:"map_groups_to_groups"`
-	AllowLegacyRsaKeys types.Bool   `tfsdk:"allow_legacy_rsa_keys"`
-	HasSecret          types.Bool   `tfsdk:"has_secret"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	UpdatedAt          types.String `tfsdk:"updated_at"`
+	ID                    types.String `tfsdk:"id"`
+	Name                  types.String `tfsdk:"name"`
+	IssuerURL             types.String `tfsdk:"issuer_url"`
+	ClientID              types.String `tfsdk:"client_id"`
+	ClientSecret          types.String `tfsdk:"client_secret"`
+	ClientSecretWo        types.String `tfsdk:"client_secret_wo"`
+	ClientSecretWoVersion types.Int64  `tfsdk:"client_secret_wo_version"`
+	Scopes                types.List   `tfsdk:"scopes"`
+	AttributeMapping      types.Map    `tfsdk:"attribute_mapping"`
+	IsEnabled             types.Bool   `tfsdk:"is_enabled"`
+	AutoCreateUsers       types.Bool   `tfsdk:"auto_create_users"`
+	PkceEnabled           types.Bool   `tfsdk:"pkce_enabled"`
+	MapGroupsToGroups     types.Bool   `tfsdk:"map_groups_to_groups"`
+	AllowLegacyRsaKeys    types.Bool   `tfsdk:"allow_legacy_rsa_keys"`
+	HasSecret             types.Bool   `tfsdk:"has_secret"`
+	CreatedAt             types.String `tfsdk:"created_at"`
+	UpdatedAt             types.String `tfsdk:"updated_at"`
 }
 
 func (r *ssoOidcResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -62,6 +65,7 @@ func (r *ssoOidcResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 		}
 	}
+	clientSecretWo, clientSecretWoVersion := writeOnlySecret("client_secret", false)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "An OIDC single sign-on provider.",
 		Attributes: map[string]schema.Attribute{
@@ -81,10 +85,13 @@ func (r *ssoOidcResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required: true,
 			},
 			"client_secret": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
 				Sensitive:           true,
-				MarkdownDescription: "OIDC client secret. Not returned by the API.",
+				MarkdownDescription: "OIDC client secret. Not returned by the API. Exactly one of `client_secret` and `client_secret_wo` is required.",
+				Validators:          []validator.String{stringvalidator.ExactlyOneOf(path.MatchRoot("client_secret_wo"))},
 			},
+			"client_secret_wo":         clientSecretWo,
+			"client_secret_wo_version": clientSecretWoVersion,
 			"scopes": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -127,6 +134,7 @@ func (r *ssoOidcResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	apiReq, d := oidcRequestFromModel(ctx, plan)
+	apiReq.ClientSecret = secretValue(ctx, req.Config, plan.ClientSecret, "client_secret_wo", &d)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -141,6 +149,7 @@ func (r *ssoOidcResource) Create(ctx context.Context, req resource.CreateRequest
 	state, d := oidcToModel(ctx, cfg)
 	resp.Diagnostics.Append(d...)
 	state.ClientSecret = plan.ClientSecret // API never returns it; preserved from config
+	state.ClientSecretWoVersion = plan.ClientSecretWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -164,17 +173,20 @@ func (r *ssoOidcResource) Read(ctx context.Context, req resource.ReadRequest, re
 	refreshed, d := oidcToModel(ctx, cfg)
 	resp.Diagnostics.Append(d...)
 	refreshed.ClientSecret = state.ClientSecret // preserved; never returned
+	refreshed.ClientSecretWoVersion = state.ClientSecretWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
 func (r *ssoOidcResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ssoOidcResourceModel
+	var plan, prior ssoOidcResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	apiReq, d := oidcRequestFromModel(ctx, plan)
+	apiReq.ClientSecret = updatedSecret(ctx, req.Config, plan.ClientSecret, prior.ClientSecret, plan.ClientSecretWoVersion, prior.ClientSecretWoVersion, "client_secret_wo", &d)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -196,6 +208,7 @@ func (r *ssoOidcResource) Update(ctx context.Context, req resource.UpdateRequest
 	state, d := oidcToModel(ctx, cfg)
 	resp.Diagnostics.Append(d...)
 	state.ClientSecret = plan.ClientSecret
+	state.ClientSecretWoVersion = plan.ClientSecretWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 

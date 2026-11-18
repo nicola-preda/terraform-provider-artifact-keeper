@@ -34,10 +34,14 @@ resource "artifactkeeper_user" "alice" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `display_name` (String)
 - `is_active` (Boolean) Defaults to `true`.
 - `is_admin` (Boolean) Defaults to `false`.
-- `password` (String, Sensitive) Password; if omitted at create a password is generated (see `generated_password`). Not returned by the API. Changing it sets the new password in place, as an admin does in the UI.
+- `password` (String, Sensitive) Password; if omitted at create a password is generated (see `generated_password`). Not returned by the API. Changing it sets the new password in place, as an admin does in the UI. Conflicts with `password_wo`.
+- `password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `password`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `password_wo_version` to send a new value.
+- `password_wo_version` (Number) Change this to send `password_wo` again, the write-only value itself is not compared between runs.
 
 ### Read-Only
 

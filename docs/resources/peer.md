@@ -33,12 +33,16 @@ variable "peer_api_key" {
 
 ### Required
 
-- `api_key` (String, Sensitive) API token (Bearer) the local instance uses to authenticate to this peer. Should be an admin-scoped token issued on the remote peer.
 - `endpoint_url` (String) Base URL of the remote peer (e.g. `https://peer.example.com`).
 - `name` (String) Unique peer name.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
+- `api_key` (String, Sensitive) API token (Bearer) the local instance uses to authenticate to this peer. Should be an admin-scoped token issued on the remote peer. Exactly one of `api_key` and `api_key_wo` is required.
+- `api_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `api_key`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `api_key_wo_version` to send a new value.
+- `api_key_wo_version` (Number) Change this to send `api_key_wo` again, the write-only value itself is not compared between runs. Changing it forces a new resource, like `api_key`.
 - `cache_size_bytes` (Number) Cache capacity in bytes. Defaults to 10 GiB.
 - `region` (String) Optional region identifier.
 

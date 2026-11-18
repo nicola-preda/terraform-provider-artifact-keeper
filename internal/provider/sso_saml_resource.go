@@ -70,7 +70,7 @@ func (r *ssoSamlResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"entity_id":   schema.StringAttribute{Required: true, MarkdownDescription: "SAML IdP entity ID."},
 			"sso_url":     schema.StringAttribute{Required: true, MarkdownDescription: "IdP SSO endpoint URL."},
 			"slo_url":     schema.StringAttribute{Optional: true, MarkdownDescription: "IdP single-logout URL."},
-			"certificate": schema.StringAttribute{Required: true, Sensitive: true, MarkdownDescription: "IdP certificate (PEM). Not returned by the API."},
+			"certificate": schema.StringAttribute{Required: true, MarkdownDescription: "IdP certificate (PEM). Not returned by the API."},
 			"name_id_format": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to the emailAddress NameID format.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"attribute_mapping": schema.MapAttribute{ElementType: types.StringType, Optional: true, Computed: true,

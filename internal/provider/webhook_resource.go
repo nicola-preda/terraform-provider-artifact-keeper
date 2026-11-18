@@ -37,6 +37,8 @@ type webhookResourceModel struct {
 	URL                  types.String `tfsdk:"url"`
 	Events               types.List   `tfsdk:"events"`
 	Secret               types.String `tfsdk:"secret"`
+	SecretWo             types.String `tfsdk:"secret_wo"`
+	SecretWoVersion      types.Int64  `tfsdk:"secret_wo_version"`
 	RepositoryID         types.String `tfsdk:"repository_id"`
 	Headers              types.Map    `tfsdk:"headers"`
 	PayloadTemplate      types.String `tfsdk:"payload_template"`
@@ -54,6 +56,7 @@ func (r *webhookResource) Metadata(_ context.Context, req resource.MetadataReque
 }
 
 func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	secretWo, secretWoVersion := writeOnlySecret("secret", true)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "An outbound webhook. There's no update for the definition, so changing anything other than `is_enabled` forces a new webhook; `is_enabled` toggles in place. Admin-only.",
 		Attributes: map[string]schema.Attribute{
@@ -82,9 +85,11 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Signing secret used to HMAC delivery bodies. If omitted, the server generates one and it is captured into state here (the API returns it only once, in the raw create response, and never again). Not returned by the API on read; preserved from state. Changing this forces a new webhook.",
+				MarkdownDescription: "Signing secret used to HMAC delivery bodies. If omitted, the server generates one and it is captured into state here (the API returns it only once, in the raw create response, and never again). Not returned by the API on read; preserved from state. Changing this forces a new webhook. Conflicts with `secret_wo`, which keeps a caller-supplied secret out of state.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
+			"secret_wo":         secretWo,
+			"secret_wo_version": secretWoVersion,
 			"repository_id": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "UUID of the repository this webhook is scoped to. Omit for a global webhook. Changing this forces a new webhook.",
@@ -172,6 +177,13 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 	if !plan.Secret.IsNull() {
 		createReq.Secret = plan.Secret.ValueStringPointer()
 	}
+	secretWo := secretValue(ctx, req.Config, types.StringNull(), "secret_wo", &resp.Diagnostics)
+	if secretWo != nil {
+		createReq.Secret = secretWo
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	if !plan.RepositoryID.IsNull() {
 		createReq.RepositoryID = plan.RepositoryID.ValueStringPointer()
 	}
@@ -209,11 +221,15 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 	state, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
 	state.keepEmpty(plan)
+	state.SecretWoVersion = plan.SecretWoVersion
 	// The API never returns the secret on read. Preserve the configured secret,
 	// or capture the server-generated one (returned only once, on create).
+	// The create response echoes a caller-supplied secret too, so keep secret_wo out of state
 	switch {
 	case !plan.Secret.IsNull() && !plan.Secret.IsUnknown():
 		state.Secret = plan.Secret
+	case secretWo != nil:
+		state.Secret = types.StringNull()
 	case generatedSecret != nil:
 		state.Secret = types.StringValue(*generatedSecret)
 	default:
@@ -245,6 +261,7 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 	resp.Diagnostics.Append(d...)
 	refreshed.keepEmpty(state)
 	refreshed.Secret = state.Secret // not returned by the API; preserved from config
+	refreshed.SecretWoVersion = state.SecretWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
@@ -276,6 +293,7 @@ func (r *webhookResource) Update(ctx context.Context, req resource.UpdateRequest
 	resp.Diagnostics.Append(d...)
 	state.keepEmpty(plan)
 	state.Secret = plan.Secret // not returned by the API; preserved from config
+	state.SecretWoVersion = plan.SecretWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 

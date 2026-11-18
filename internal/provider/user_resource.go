@@ -31,6 +31,8 @@ type userResourceModel struct {
 	Username           types.String `tfsdk:"username"`
 	Email              types.String `tfsdk:"email"`
 	Password           types.String `tfsdk:"password"`
+	PasswordWo         types.String `tfsdk:"password_wo"`
+	PasswordWoVersion  types.Int64  `tfsdk:"password_wo_version"`
 	DisplayName        types.String `tfsdk:"display_name"`
 	IsAdmin            types.Bool   `tfsdk:"is_admin"`
 	IsActive           types.Bool   `tfsdk:"is_active"`
@@ -46,13 +48,16 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 }
 
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	passwordWo, passwordWoVersion := writeOnlySecret("password", false)
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a local user. SSO users are provisioned on login and need not be managed here.",
 		Attributes: map[string]schema.Attribute{
 			"id":                   schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"username":             schema.StringAttribute{Required: true, MarkdownDescription: "Unique username. Changing it forces a new user.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
 			"email":                schema.StringAttribute{Required: true},
-			"password":             schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Password; if omitted at create a password is generated (see `generated_password`). Not returned by the API. Changing it sets the new password in place, as an admin does in the UI."},
+			"password":             schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Password; if omitted at create a password is generated (see `generated_password`). Not returned by the API. Changing it sets the new password in place, as an admin does in the UI. Conflicts with `password_wo`."},
+			"password_wo":          passwordWo,
+			"password_wo_version":  passwordWoVersion,
 			"display_name":         schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"is_admin":             schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `false`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
 			"is_active":            schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Defaults to `true`.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}},
@@ -78,11 +83,14 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	createReq := client.CreateUserRequest{
 		Username:    plan.Username.ValueString(),
 		Email:       plan.Email.ValueString(),
-		Password:    optionalString(plan.Password),
+		Password:    secretValue(ctx, req.Config, plan.Password, "password_wo", &resp.Diagnostics),
 		DisplayName: optionalString(plan.DisplayName),
 	}
 	if !plan.IsAdmin.IsNull() && !plan.IsAdmin.IsUnknown() {
 		createReq.IsAdmin = plan.IsAdmin.ValueBoolPointer()
+	}
+	if resp.Diagnostics.HasError() {
+		return
 	}
 	out, err := r.client.CreateUser(ctx, createReq)
 	if err != nil {
@@ -106,6 +114,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	state := userToModel(&created)
 	state.Password = plan.Password
+	state.PasswordWoVersion = plan.PasswordWoVersion
 	state.GeneratedPassword = stringPointerValue(out.GeneratedPassword)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -127,6 +136,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 	refreshed := userToModel(u)
 	refreshed.Password = state.Password
+	refreshed.PasswordWoVersion = state.PasswordWoVersion
 	refreshed.GeneratedPassword = state.GeneratedPassword
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
@@ -146,21 +156,27 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if !plan.IsActive.IsNull() && !plan.IsActive.IsUnknown() {
 		updateReq.IsActive = plan.IsActive.ValueBoolPointer()
 	}
+	password := updatedSecret(ctx, req.Config, plan.Password, state.Password, plan.PasswordWoVersion, state.PasswordWoVersion, "password_wo", &resp.Diagnostics)
+	if isSet(plan.Password) && plan.Password.Equal(state.Password) {
+		password = nil
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	u, err := r.client.UpdateUser(ctx, plan.ID.ValueString(), updateReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating user", err.Error())
 		return
 	}
-	password := state.Password
-	if !plan.Password.IsNull() && !plan.Password.IsUnknown() && !plan.Password.Equal(state.Password) {
-		if err := r.client.SetUserPassword(ctx, plan.ID.ValueString(), plan.Password.ValueString()); err != nil {
+	if password != nil {
+		if err := r.client.SetUserPassword(ctx, plan.ID.ValueString(), *password); err != nil {
 			resp.Diagnostics.AddError("Error setting user password", err.Error())
 			return
 		}
-		password = plan.Password
 	}
 	refreshed := userToModel(u)
-	refreshed.Password = password
+	refreshed.Password = plan.Password
+	refreshed.PasswordWoVersion = plan.PasswordWoVersion
 	refreshed.GeneratedPassword = state.GeneratedPassword
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
