@@ -26,6 +26,20 @@ internal/provider/sso_oidc_resource.go
       "human_author": "Nicola Preda <nicola.preda@proton.ch>"
     }
   },
+  "commit_stats": {
+    "human_additions": 0,
+    "unknown_additions": 0,
+    "ai_additions": 46,
+    "ai_accepted": 46,
+    "git_diff_deleted_lines": 5,
+    "git_diff_added_lines": 46,
+    "tool_model_breakdown": {
+      "claude::claude-opus-5-5": {
+        "ai_additions": 46,
+        "ai_accepted": 46
+      }
+    }
+  },
   "token_usage": {
     "carried": {
       "total": {
