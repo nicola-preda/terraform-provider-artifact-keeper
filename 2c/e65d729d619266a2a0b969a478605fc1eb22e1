@@ -64,5 +64,19 @@ internal/provider/writeonly_acc_test.go
       "human_author": "Nicola Preda <nicola.preda@proton.ch>"
     }
   },
+  "commit_stats": {
+    "human_additions": 0,
+    "unknown_additions": 0,
+    "ai_additions": 722,
+    "ai_accepted": 722,
+    "git_diff_deleted_lines": 131,
+    "git_diff_added_lines": 722,
+    "tool_model_breakdown": {
+      "claude::claude-opus-5-5": {
+        "ai_additions": 722,
+        "ai_accepted": 722
+      }
+    }
+  },
   "proton_build": "1.7.6-proton.8"
 }
