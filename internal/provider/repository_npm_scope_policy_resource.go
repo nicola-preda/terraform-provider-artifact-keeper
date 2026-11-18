@@ -104,6 +104,7 @@ func (r *repositoryNpmScopePolicyResource) Create(ctx context.Context, req resou
 
 	state, d := npmScopePolicyToModel(ctx, repoKey, policy)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -127,6 +128,7 @@ func (r *repositoryNpmScopePolicyResource) Read(ctx context.Context, req resourc
 
 	refreshed, d := npmScopePolicyToModel(ctx, repoKey, policy)
 	resp.Diagnostics.Append(d...)
+	refreshed.keepEmpty(state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
@@ -156,6 +158,7 @@ func (r *repositoryNpmScopePolicyResource) Update(ctx context.Context, req resou
 
 	state, d := npmScopePolicyToModel(ctx, repoKey, policy)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -197,4 +200,8 @@ func npmScopePolicyToModel(ctx context.Context, repoKey string, p *client.NpmSco
 		AllowUnscoped: types.BoolValue(p.AllowUnscoped),
 		Active:        types.BoolValue(p.Active),
 	}, diags
+}
+
+func (m *repositoryNpmScopePolicyResourceModel) keepEmpty(prior repositoryNpmScopePolicyResourceModel) {
+	m.AllowedScopes = keepEmptyList(prior.AllowedScopes, m.AllowedScopes)
 }

@@ -208,6 +208,7 @@ func (r *webhookResource) Create(ctx context.Context, req resource.CreateRequest
 	resp.Diagnostics.Append(d...)
 	state, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	// The API never returns the secret on read. Preserve the configured secret,
 	// or capture the server-generated one (returned only once, on create).
 	switch {
@@ -242,6 +243,7 @@ func (r *webhookResource) Read(ctx context.Context, req resource.ReadRequest, re
 	resp.Diagnostics.Append(d...)
 	refreshed, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
+	refreshed.keepEmpty(state)
 	refreshed.Secret = state.Secret // not returned by the API; preserved from config
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
@@ -272,6 +274,7 @@ func (r *webhookResource) Update(ctx context.Context, req resource.UpdateRequest
 	resp.Diagnostics.Append(d...)
 	state, d := webhookToModel(ctx, wh)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	state.Secret = plan.Secret // not returned by the API; preserved from config
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -327,4 +330,8 @@ func webhookToModel(ctx context.Context, wh *client.Webhook) (webhookResourceMod
 		LastTriggeredAt:      stringPointerValue(wh.LastTriggeredAt),
 		CreatedAt:            types.StringValue(wh.CreatedAt),
 	}, diags
+}
+
+func (m *webhookResourceModel) keepEmpty(prior webhookResourceModel) {
+	m.Headers = keepEmptyMap(prior.Headers, m.Headers)
 }

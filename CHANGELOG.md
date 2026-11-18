@@ -5,6 +5,15 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Fixed
+
+- **`artifactkeeper_repository_upstream_filter` failed with "Provider produced inconsistent result after apply" when `include_patterns` or `exclude_patterns` was `[]`** (#7). The API answers `[]` for an empty and an unset list alike and the provider read both back as null, it now keeps what the config says
+- **Clearing `allowed_licenses` on `artifactkeeper_promotion_rule` or `npm_allowed_name_patterns` on `artifactkeeper_repository` did nothing.** The empty list was left out of the update, so the backend kept the old values and the apply failed with an inconsistent result. Both are sent now, and removing `allowed_licenses` from the config clears it
+- **The same `[]` failure as #7 on other resources:** `entries` and `subdirs` on `artifactkeeper_repository_allowlist`, `allowed_scopes` on `artifactkeeper_repository_npm_scope_policy`, `allowed_licenses` on `artifactkeeper_promotion_rule`, `allowed_repo_ids` and `group_binding_ids` on `artifactkeeper_ci_oidc_identity_mapping`, `npm_allowed_name_patterns` on `artifactkeeper_repository`, `headers = {}` on `artifactkeeper_webhook`, and every selector and filter list or map on `artifactkeeper_sync_policy` (a selector or filter with only empty fields too)
+- **`scopes = []` on `artifactkeeper_api_token` and `artifactkeeper_sso_oidc` is refused at plan time.** The backend stores its default scopes for an empty list, so the apply used to fail with an inconsistent result after the object was created
+
 ## [1.12.0] - 2026-11-18
 
 Validated against Artifact Keeper 1.12.0. No management route the provider calls moved, and the only consumed field removed is `allow_anonymous_download` on `/admin/settings` (#5652).

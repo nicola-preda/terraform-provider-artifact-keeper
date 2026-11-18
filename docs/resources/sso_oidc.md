@@ -48,7 +48,7 @@ variable "oidc_client_secret" {
 - `is_enabled` (Boolean) Whether the provider is enabled. Defaults to `true`.
 - `map_groups_to_groups` (Boolean) Sync OIDC groups to Artifact Keeper groups. Defaults to `false`.
 - `pkce_enabled` (Boolean) Enable PKCE (S256). Defaults to `true`.
-- `scopes` (List of String) OIDC scopes. Defaults to `["openid", "profile", "email"]`.
+- `scopes` (List of String) OIDC scopes. Defaults to `["openid", "profile", "email"]`, an empty list is refused because the backend stores the default for it.
 
 ### Read-Only
 

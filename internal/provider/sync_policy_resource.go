@@ -230,6 +230,7 @@ func (r *syncPolicyResource) Create(ctx context.Context, req resource.CreateRequ
 
 	state, d := syncPolicyToModel(ctx, policy)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -252,6 +253,7 @@ func (r *syncPolicyResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	refreshed, d := syncPolicyToModel(ctx, policy)
 	resp.Diagnostics.Append(d...)
+	refreshed.keepEmpty(state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
@@ -276,6 +278,7 @@ func (r *syncPolicyResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	state, d := syncPolicyToModel(ctx, policy)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -509,4 +512,47 @@ func artifactFilterToModel(ctx context.Context, f client.ArtifactFilter) (*artif
 		MaxSizeBytes: int64PointerValue(f.MaxSizeBytes),
 		MatchTags:    tagsVal,
 	}, diags
+}
+
+// keepEmpty also keeps a configured selector or filter whose every field is
+// empty, the API reads it back as absent
+func (m *syncPolicyResourceModel) keepEmpty(prior syncPolicyResourceModel) {
+	switch {
+	case m.RepoSelector == nil && prior.RepoSelector != nil && prior.RepoSelector.empty():
+		s := *prior.RepoSelector
+		m.RepoSelector = &s
+	case m.RepoSelector != nil && prior.RepoSelector != nil:
+		m.RepoSelector.MatchLabels = keepEmptyMap(prior.RepoSelector.MatchLabels, m.RepoSelector.MatchLabels)
+		m.RepoSelector.MatchFormats = keepEmptyList(prior.RepoSelector.MatchFormats, m.RepoSelector.MatchFormats)
+		m.RepoSelector.MatchRepos = keepEmptyList(prior.RepoSelector.MatchRepos, m.RepoSelector.MatchRepos)
+	}
+	switch {
+	case m.PeerSelector == nil && prior.PeerSelector != nil && prior.PeerSelector.empty():
+		s := *prior.PeerSelector
+		m.PeerSelector = &s
+	case m.PeerSelector != nil && prior.PeerSelector != nil:
+		m.PeerSelector.MatchLabels = keepEmptyMap(prior.PeerSelector.MatchLabels, m.PeerSelector.MatchLabels)
+		m.PeerSelector.MatchPeers = keepEmptyList(prior.PeerSelector.MatchPeers, m.PeerSelector.MatchPeers)
+	}
+	switch {
+	case m.ArtifactFilter == nil && prior.ArtifactFilter != nil && prior.ArtifactFilter.empty():
+		f := *prior.ArtifactFilter
+		m.ArtifactFilter = &f
+	case m.ArtifactFilter != nil && prior.ArtifactFilter != nil:
+		m.ArtifactFilter.IncludePaths = keepEmptyList(prior.ArtifactFilter.IncludePaths, m.ArtifactFilter.IncludePaths)
+		m.ArtifactFilter.ExcludePaths = keepEmptyList(prior.ArtifactFilter.ExcludePaths, m.ArtifactFilter.ExcludePaths)
+		m.ArtifactFilter.MatchTags = keepEmptyMap(prior.ArtifactFilter.MatchTags, m.ArtifactFilter.MatchTags)
+	}
+}
+
+func (s repoSelectorModel) empty() bool {
+	return len(s.MatchLabels.Elements()) == 0 && len(s.MatchFormats.Elements()) == 0 && s.MatchPattern.IsNull() && len(s.MatchRepos.Elements()) == 0
+}
+
+func (s peerSelectorModel) empty() bool {
+	return !s.All.ValueBool() && len(s.MatchLabels.Elements()) == 0 && s.MatchRegion.IsNull() && len(s.MatchPeers.Elements()) == 0
+}
+
+func (f artifactFilterModel) empty() bool {
+	return f.MaxAgeDays.IsNull() && len(f.IncludePaths.Elements()) == 0 && len(f.ExcludePaths.Elements()) == 0 && f.MaxSizeBytes.IsNull() && len(f.MatchTags.Elements()) == 0
 }

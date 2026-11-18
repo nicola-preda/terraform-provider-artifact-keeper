@@ -129,12 +129,12 @@ type UpdateRepositoryRequest struct {
 	VirtualMetadataPartial             *bool    `json:"virtual_metadata_partial,omitempty"`
 	// Update-only settable fields (not accepted on create; set with a follow-up
 	// PATCH). All echoed back in the response, so they round-trip.
-	QuarantineEnabled         *bool    `json:"quarantine_enabled,omitempty"`
-	QuarantineDurationMinutes *int64   `json:"quarantine_duration_minutes,omitempty"`
-	CurationAllowUnverified   *bool    `json:"curation_allow_unverified,omitempty"`
-	CurationEnabled           *bool    `json:"curation_enabled,omitempty"`
-	CurationDefaultAction     *string  `json:"curation_default_action,omitempty"`
-	NpmAllowedNamePatterns    []string `json:"npm_allowed_name_patterns,omitempty"`
+	QuarantineEnabled         *bool     `json:"quarantine_enabled,omitempty"`
+	QuarantineDurationMinutes *int64    `json:"quarantine_duration_minutes,omitempty"`
+	CurationAllowUnverified   *bool     `json:"curation_allow_unverified,omitempty"`
+	CurationEnabled           *bool     `json:"curation_enabled,omitempty"`
+	CurationDefaultAction     *string   `json:"curation_default_action,omitempty"`
+	NpmAllowedNamePatterns    *[]string `json:"npm_allowed_name_patterns,omitempty"`
 	// Whole object sent as a patch; the backend merges it over the stored
 	// config, so sending every field makes it authoritative.
 	Debian            *DebianConfig `json:"debian,omitempty"`
