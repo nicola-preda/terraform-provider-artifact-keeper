@@ -75,8 +75,8 @@ func (r *apiTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Token scopes (e.g. `[\"admin\"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `[\"read:artifacts\"]`.",
-				Validators:          []validator.List{listvalidator.ValueStringsAre(stringvalidator.OneOf(tokenScopes...))},
+				MarkdownDescription: "Token scopes (e.g. `[\"admin\"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `[\"read:artifacts\"]`, an empty list is refused because the backend stores the default for it.",
+				Validators:          []validator.List{listvalidator.SizeAtLeast(1), listvalidator.ValueStringsAre(stringvalidator.OneOf(tokenScopes...))},
 				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace(), listplanmodifier.UseStateForUnknown()},
 			},
 			"expires_in_days": schema.Int64Attribute{

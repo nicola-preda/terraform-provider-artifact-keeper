@@ -37,7 +37,7 @@ output "ci_token" {
 
 - `expires_in_days` (Number) Days until expiry (1-365). Omit for a non-expiring token.
 - `repo_selector` (String) Restrict the token to the repositories this selector matches, as a JSON object, e.g. `jsonencode({ match_formats = ["docker"] })`. Keys are `match_formats`, `match_labels`, `match_pattern` and `match_repos`; the server refuses an empty or unknown-key selector. Resolved at auth time, so new matching repos are picked up. Requires Artifact Keeper 1.10.2 or later. Its configured value is preserved in state. Changing this forces a new token.
-- `scopes` (List of String) Token scopes (e.g. `["admin"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `["read:artifacts"]`.
+- `scopes` (List of String) Token scopes (e.g. `["admin"]` for peering, or `read:artifacts`/`write:artifacts`). Defaults to `["read:artifacts"]`, an empty list is refused because the backend stores the default for it.
 
 ### Read-Only
 

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
@@ -87,7 +89,8 @@ func (r *ssoOidcResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "OIDC scopes. Defaults to `[\"openid\", \"profile\", \"email\"]`.",
+				MarkdownDescription: "OIDC scopes. Defaults to `[\"openid\", \"profile\", \"email\"]`, an empty list is refused because the backend stores the default for it.",
+				Validators:          []validator.List{listvalidator.SizeAtLeast(1)},
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"attribute_mapping": schema.MapAttribute{
