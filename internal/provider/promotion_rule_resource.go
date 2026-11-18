@@ -165,6 +165,7 @@ func (r *promotionRuleResource) Create(ctx context.Context, req resource.CreateR
 
 	state, d := promotionRuleToModel(ctx, rule)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -187,6 +188,7 @@ func (r *promotionRuleResource) Read(ctx context.Context, req resource.ReadReque
 
 	refreshed, d := promotionRuleToModel(ctx, rule)
 	resp.Diagnostics.Append(d...)
+	refreshed.keepEmpty(state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 
@@ -240,6 +242,7 @@ func (r *promotionRuleResource) Update(ctx context.Context, req resource.UpdateR
 
 	state, d := promotionRuleToModel(ctx, rule)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -276,4 +279,8 @@ func promotionRuleToModel(ctx context.Context, rule *client.PromotionRule) (prom
 		CreatedAt:          types.StringValue(rule.CreatedAt),
 		UpdatedAt:          types.StringValue(rule.UpdatedAt),
 	}, diags
+}
+
+func (m *promotionRuleResourceModel) keepEmpty(prior promotionRuleResourceModel) {
+	m.AllowedLicenses = keepEmptyList(prior.AllowedLicenses, m.AllowedLicenses)
 }

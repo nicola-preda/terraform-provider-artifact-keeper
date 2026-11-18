@@ -148,6 +148,7 @@ func (r *ciOidcMappingResource) Create(ctx context.Context, req resource.CreateR
 
 	state, d := ciOidcMappingToModel(ctx, mapping)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	state.ClaimFilters = plan.ClaimFilters // keep configured JSON encoding verbatim
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -171,6 +172,7 @@ func (r *ciOidcMappingResource) Read(ctx context.Context, req resource.ReadReque
 
 	refreshed, d := ciOidcMappingToModel(ctx, mapping)
 	resp.Diagnostics.Append(d...)
+	refreshed.keepEmpty(state)
 	// Keep configured claim_filters encoding when semantically equal to the API's,
 	// so whitespace/key-order don't churn as perpetual diffs. Overwrite only on
 	// real drift.
@@ -230,6 +232,7 @@ func (r *ciOidcMappingResource) Update(ctx context.Context, req resource.UpdateR
 
 	state, d := ciOidcMappingToModel(ctx, mapping)
 	resp.Diagnostics.Append(d...)
+	state.keepEmpty(plan)
 	state.ClaimFilters = plan.ClaimFilters // keep configured JSON encoding verbatim
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -276,4 +279,9 @@ func ciOidcMappingToModel(ctx context.Context, m *client.CiOidcMapping) (ciOidcM
 		CreatedAt:       types.StringValue(m.CreatedAt),
 		UpdatedAt:       types.StringValue(m.UpdatedAt),
 	}, d
+}
+
+func (m *ciOidcMappingResourceModel) keepEmpty(prior ciOidcMappingResourceModel) {
+	m.AllowedRepoIDs = keepEmptyList(prior.AllowedRepoIDs, m.AllowedRepoIDs)
+	m.GroupBindingIDs = keepEmptyList(prior.GroupBindingIDs, m.GroupBindingIDs)
 }

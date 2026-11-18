@@ -584,6 +584,7 @@ func (r *repositoryResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	applyWriteOnlyRepoFields(&model, plan)
+	model.NpmAllowedNamePatterns = keepEmptyList(plan.NpmAllowedNamePatterns, model.NpmAllowedNamePatterns)
 	if !plan.Members.IsNull() {
 		var keys []string
 		resp.Diagnostics.Append(plan.Members.ElementsAs(ctx, &keys, false)...)
@@ -623,6 +624,7 @@ func (r *repositoryResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 	applyWriteOnlyRepoFields(&model, state)
+	model.NpmAllowedNamePatterns = keepEmptyList(state.NpmAllowedNamePatterns, model.NpmAllowedNamePatterns)
 	// Only reconcile membership when configured; leaving it null avoids a
 	// null-vs-empty diff for repos that don't use it.
 	if repo.RepoType == "virtual" && !state.Members.IsNull() {
@@ -768,6 +770,7 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 	applyWriteOnlyRepoFields(&model, plan)
+	model.NpmAllowedNamePatterns = keepEmptyList(plan.NpmAllowedNamePatterns, model.NpmAllowedNamePatterns)
 	if !plan.Members.IsNull() {
 		var keys []string
 		resp.Diagnostics.Append(plan.Members.ElementsAs(ctx, &keys, false)...)

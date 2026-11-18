@@ -124,6 +124,7 @@ func (r *repositoryAllowlistResource) Read(ctx context.Context, req resource.Rea
 	}
 	m, d := allowlistToModel(ctx, state.RepositoryKey.ValueString(), a)
 	resp.Diagnostics.Append(d...)
+	resp.Diagnostics.Append(m.keepEmpty(ctx, state)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, m)...)
 }
 
@@ -162,6 +163,7 @@ func (r *repositoryAllowlistResource) put(ctx context.Context, plan repositoryAl
 	}
 	m, d := allowlistToModel(ctx, key, a)
 	diags.Append(d...)
+	diags.Append(m.keepEmpty(ctx, plan)...)
 	diags.Append(state.Set(ctx, m)...)
 }
 
@@ -206,4 +208,24 @@ func allowlistToModel(ctx context.Context, key string, a *client.RepositoryAllow
 	diags.Append(d...)
 	m.Entries = l
 	return m, diags
+}
+
+func (m *repositoryAllowlistResourceModel) keepEmpty(ctx context.Context, prior repositoryAllowlistResourceModel) diag.Diagnostics {
+	m.Entries = keepEmptyList(prior.Entries, m.Entries)
+	if m.Entries.IsNull() || prior.Entries.IsNull() || prior.Entries.IsUnknown() || len(m.Entries.Elements()) != len(prior.Entries.Elements()) {
+		return nil
+	}
+	var got, was []allowlistEntryModel
+	diags := m.Entries.ElementsAs(ctx, &got, false)
+	diags.Append(prior.Entries.ElementsAs(ctx, &was, false)...)
+	if diags.HasError() {
+		return diags
+	}
+	for i := range got {
+		got[i].Subdirs = keepEmptyList(was[i].Subdirs, got[i].Subdirs)
+	}
+	l, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: allowlistEntryAttrTypes}, got)
+	diags.Append(d...)
+	m.Entries = l
+	return diags
 }

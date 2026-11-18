@@ -48,6 +48,14 @@ func keepEmptyList(prior, got types.List) types.List {
 	return got
 }
 
+// keepEmptyMap is keepEmptyList for maps
+func keepEmptyMap(prior, got types.Map) types.Map {
+	if got.IsNull() && !prior.IsNull() && !prior.IsUnknown() && len(prior.Elements()) == 0 {
+		return prior
+	}
+	return got
+}
+
 // stringMapValue converts a Go string map into a types.Map, returning a null
 // map for a nil map.
 func stringMapValue(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
