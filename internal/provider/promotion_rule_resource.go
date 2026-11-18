@@ -203,10 +203,15 @@ func (r *promotionRuleResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	// Always sent: an omitted list keeps the stored one, and unset means no
+	// license restriction
+	if licenses == nil {
+		licenses = []string{}
+	}
 	updateReq := client.UpdatePromotionRuleRequest{
 		Name:            plan.Name.ValueStringPointer(),
 		MaxCveSeverity:  optionalString(plan.MaxCveSeverity),
-		AllowedLicenses: licenses,
+		AllowedLicenses: &licenses,
 	}
 	if !plan.IsEnabled.IsNull() && !plan.IsEnabled.IsUnknown() {
 		updateReq.IsEnabled = plan.IsEnabled.ValueBoolPointer()

@@ -47,15 +47,15 @@ type CreatePromotionRuleRequest struct {
 // /promotion-rules/{id}). Every field is optional; an omitted field preserves
 // its current value server-side (source/target repo are immutable and absent).
 type UpdatePromotionRuleRequest struct {
-	Name               *string  `json:"name,omitempty"`
-	IsEnabled          *bool    `json:"is_enabled,omitempty"`
-	MaxCveSeverity     *string  `json:"max_cve_severity,omitempty"`
-	AllowedLicenses    []string `json:"allowed_licenses,omitempty"`
-	RequireSignature   *bool    `json:"require_signature,omitempty"`
-	MinStagingHours    *int64   `json:"min_staging_hours,omitempty"`
-	MaxArtifactAgeDays *int64   `json:"max_artifact_age_days,omitempty"`
-	MinHealthScore     *int64   `json:"min_health_score,omitempty"`
-	AutoPromote        *bool    `json:"auto_promote,omitempty"`
+	Name               *string   `json:"name,omitempty"`
+	IsEnabled          *bool     `json:"is_enabled,omitempty"`
+	MaxCveSeverity     *string   `json:"max_cve_severity,omitempty"`
+	AllowedLicenses    *[]string `json:"allowed_licenses,omitempty"`
+	RequireSignature   *bool     `json:"require_signature,omitempty"`
+	MinStagingHours    *int64    `json:"min_staging_hours,omitempty"`
+	MaxArtifactAgeDays *int64    `json:"max_artifact_age_days,omitempty"`
+	MinHealthScore     *int64    `json:"min_health_score,omitempty"`
+	AutoPromote        *bool     `json:"auto_promote,omitempty"`
 }
 
 func (c *Client) CreatePromotionRule(ctx context.Context, req CreatePromotionRuleRequest) (*PromotionRule, error) {

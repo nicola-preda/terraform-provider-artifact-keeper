@@ -735,7 +735,10 @@ func (r *repositoryResource) Update(ctx context.Context, req resource.UpdateRequ
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		updateReq.NpmAllowedNamePatterns = patterns
+		if patterns == nil {
+			patterns = []string{}
+		}
+		updateReq.NpmAllowedNamePatterns = &patterns
 	}
 	debianReq, diags := debianConfigFromObject(ctx, plan.Debian)
 	resp.Diagnostics.Append(diags...)

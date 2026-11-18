@@ -10,6 +10,7 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 ### Fixed
 
 - **`artifactkeeper_repository_upstream_filter` failed with "Provider produced inconsistent result after apply" when `include_patterns` or `exclude_patterns` was `[]`** (#7). The API answers `[]` for an empty and an unset list alike and the provider read both back as null, it now keeps what the config says
+- **Clearing `allowed_licenses` on `artifactkeeper_promotion_rule` or `npm_allowed_name_patterns` on `artifactkeeper_repository` did nothing.** The empty list was left out of the update, so the backend kept the old values and the apply failed with an inconsistent result. Both are sent now, and removing `allowed_licenses` from the config clears it
 
 ## [1.12.0] - 2026-11-18
 
