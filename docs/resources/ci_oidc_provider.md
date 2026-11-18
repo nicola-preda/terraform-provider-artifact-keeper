@@ -37,6 +37,7 @@ resource "artifactkeeper_ci_oidc_provider" "gitlab_ci" {
 - `key_source` (String) How signing keys are found (Artifact Keeper 1.11.0): `discovery` (default, the issuer's OIDC discovery document) or `static` (only `static_jwks`, never contacting the issuer, e.g. for an on-prem Kubernetes cluster).
 - `provider_type` (String) Provider flavor (free-form, e.g. `generic`, `github`, `gitlab`); only affects the derived username format. Defaults to `generic`.
 - `static_jwks` (String) The JWKS a `static` provider verifies against, as JSON (`{"keys": [...]}`, e.g. the output of `kubectl get --raw /openid/v1/jwks`). Required with `key_source = "static"`, refused otherwise. Public RSA or EC keys with unique `kid`s.
+- `token_ttl_secs` (Number) Lifetime in seconds of the access token an exchange through this provider mints (Artifact Keeper 1.12.0): `60` to `3600`, defaults to `900`. Ignored by `kubernetes` providers. Leave it unset against earlier backends.
 
 ### Read-Only
 

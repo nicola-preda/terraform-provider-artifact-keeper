@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -39,6 +41,7 @@ type ciOidcProviderResourceModel struct {
 	MappingCount types.Int64  `tfsdk:"mapping_count"`
 	KeySource    types.String `tfsdk:"key_source"`
 	StaticJWKS   types.String `tfsdk:"static_jwks"`
+	TokenTTLSecs types.Int64  `tfsdk:"token_ttl_secs"`
 	CreatedAt    types.String `tfsdk:"created_at"`
 	UpdatedAt    types.String `tfsdk:"updated_at"`
 }
@@ -92,6 +95,13 @@ func (r *ciOidcProviderResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"static_jwks": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "The JWKS a `static` provider verifies against, as JSON (`{\"keys\": [...]}`, e.g. the output of `kubectl get --raw /openid/v1/jwks`). Required with `key_source = \"static\"`, refused otherwise. Public RSA or EC keys with unique `kid`s.",
+			},
+			"token_ttl_secs": schema.Int64Attribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Lifetime in seconds of the access token an exchange through this provider mints (Artifact Keeper 1.12.0): `60` to `3600`, defaults to `900`. Ignored by `kubernetes` providers. Leave it unset against earlier backends.",
+				Validators:          []validator.Int64{int64validator.Between(60, 3600)},
+				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"mapping_count": schema.Int64Attribute{
 				Computed:            true,
@@ -195,6 +205,7 @@ func ciOidcRequestFromModel(m ciOidcProviderResourceModel) client.CiOidcProvider
 	if v := optionalString(m.StaticJWKS); v != nil {
 		req.StaticJWKS = json.RawMessage(*v)
 	}
+	req.TokenTTLSecs = optionalInt64(m.TokenTTLSecs)
 	return req
 }
 
@@ -215,6 +226,7 @@ func ciOidcToModel(c *client.CiOidcProvider, prior ciOidcProviderResourceModel) 
 	return ciOidcProviderResourceModel{
 		KeySource:    types.StringValue(c.KeySource),
 		StaticJWKS:   jwks,
+		TokenTTLSecs: int64PointerValue(c.TokenTTLSecs),
 		ID:           types.StringValue(c.ID),
 		Name:         types.StringValue(c.Name),
 		ProviderType: types.StringValue(c.ProviderType),

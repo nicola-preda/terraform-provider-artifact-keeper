@@ -20,6 +20,7 @@ type CiOidcProvider struct {
 	MappingCount int64           `json:"mapping_count"`
 	KeySource    string          `json:"key_source"`
 	StaticJWKS   json.RawMessage `json:"static_jwks"`
+	TokenTTLSecs *int64          `json:"token_ttl_secs"` // nil before 1.12.0
 	CreatedAt    string          `json:"created_at"`
 	UpdatedAt    string          `json:"updated_at"`
 }
@@ -37,7 +38,8 @@ type CiOidcProviderRequest struct {
 	IsEnabled    *bool   `json:"is_enabled,omitempty"`
 	KeySource    *string `json:"key_source,omitempty"`
 	// StaticJWKS replaces the stored JWKS whole; only with key_source=static.
-	StaticJWKS json.RawMessage `json:"static_jwks,omitempty"`
+	StaticJWKS   json.RawMessage `json:"static_jwks,omitempty"`
+	TokenTTLSecs *int64          `json:"token_ttl_secs,omitempty"`
 }
 
 func (c *Client) CreateCiOidcProvider(ctx context.Context, req CiOidcProviderRequest) (*CiOidcProvider, error) {
