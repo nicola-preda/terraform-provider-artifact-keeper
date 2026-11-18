@@ -7,6 +7,11 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ## [Unreleased]
 
+### Security
+
+- Dependencies bumped for advisories reported against the provider binary: `golang.org/x/net` 0.58.0 to 0.62.0 (GO-2026-6612 and others), `golang.org/x/crypto` 0.55.0 to 0.58.0, `golang.org/x/mod` to 0.43.0, `github.com/yuin/goldmark` to 1.7.17
+- `toolchain go1.26.10` in `go.mod`: the new `go 1.26.0` line would otherwise make the release workflows build with Go 1.26.0 and its stdlib HTTP/2 advisories
+
 ## [1.12.1] - 2026-11-18
 
 Validated against Artifact Keeper 1.12.1, which is 1.12.0 plus the Windows build fix and a dependency update. No route, request or response the provider uses changed, so 1.12.0 and 1.12.1 both work with this release.
