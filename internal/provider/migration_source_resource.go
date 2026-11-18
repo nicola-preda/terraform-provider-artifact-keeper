@@ -90,7 +90,6 @@ func (r *migrationSourceResource) Schema(_ context.Context, _ resource.SchemaReq
 			"credential_token_wo_version": tokenWoVersion,
 			"credential_username": schema.StringAttribute{
 				Optional:            true,
-				Sensitive:           true,
 				MarkdownDescription: "Username for `basic_auth`. Not returned by the API.",
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},

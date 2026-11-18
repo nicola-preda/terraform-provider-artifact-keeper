@@ -250,7 +250,6 @@ func (r *repositoryResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"trusted_gpg_key": schema.StringAttribute{
 				Optional:            true,
-				Sensitive:           true,
 				MarkdownDescription: "ASCII-armored OpenPGP **public** key trusted to sign an RPM curation remote's `repomd.xml`. Write-only, the API never returns it (see `has_trusted_gpg_key`).",
 			},
 			"repodata_depth": schema.Int64Attribute{

@@ -47,7 +47,7 @@ variable "ldap_bind_password" {
 - `bind_password` (String, Sensitive) Password for bind_dn. Not returned by the API. Conflicts with `bind_password_wo`.
 - `bind_password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `bind_password`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `bind_password_wo_version` to send a new value.
 - `bind_password_wo_version` (Number) Change this to send `bind_password_wo` again, the write-only value itself is not compared between runs.
-- `ca_certificate` (String, Sensitive) PEM CA bundle used to verify the LDAP server's certificate. Write-only, the API never returns it (see `has_ca_certificate`). Set `""` to clear.
+- `ca_certificate` (String) PEM CA bundle used to verify the LDAP server's certificate. Write-only, the API never returns it (see `has_ca_certificate`). Set `""` to clear.
 - `display_name_attribute` (String) Defaults to `cn`.
 - `email_attribute` (String) Defaults to `mail`.
 - `group_base_dn` (String)

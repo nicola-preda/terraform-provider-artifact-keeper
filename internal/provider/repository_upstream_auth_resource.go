@@ -82,7 +82,6 @@ func (r *repositoryUpstreamAuthResource) Schema(_ context.Context, _ resource.Sc
 			},
 			"username": schema.StringAttribute{
 				Optional:            true,
-				Sensitive:           true,
 				MarkdownDescription: "Username for `basic` auth. Not returned by the API.",
 			},
 			"password": schema.StringAttribute{

@@ -95,7 +95,7 @@ resource "artifactkeeper_repository" "debian_proxy" {
 - `quota_bytes` (Number) Storage quota in bytes. Omit for unlimited.
 - `repodata_depth` (Number) Hosted RPM repositories: directory depth at which independent YUM/DNF metadata is generated (Artifact Keeper 1.11.0). `0` (default) is one `repodata/` at the root; `1` gives one per top-level directory, and so on. Changeable only while the repository is empty.
 - `storage_backend` (String) Override the storage backend for this repository. Non-admins may only use the default. Changing this forces a new repository.
-- `trusted_gpg_key` (String, Sensitive) ASCII-armored OpenPGP **public** key trusted to sign an RPM curation remote's `repomd.xml`. Write-only, the API never returns it (see `has_trusted_gpg_key`).
+- `trusted_gpg_key` (String) ASCII-armored OpenPGP **public** key trusted to sign an RPM curation remote's `repomd.xml`. Write-only, the API never returns it (see `has_trusted_gpg_key`).
 - `upstream_url` (String) Upstream registry URL for `remote` (pull-through cache) repositories. Changing this forces a new repository.
 - `versioning_enabled` (Boolean) Enable first-class artifact versioning (Generic/Mlmodel repos append immutable revisions instead of overwriting). Defaults to `false`.
 - `virtual_metadata_partial` (Boolean) Virtual repositories: when a member's metadata cannot be fetched, serve the merge of the members that answered instead of failing with 502 (Artifact Keeper 1.11.0). Write-only in the API.

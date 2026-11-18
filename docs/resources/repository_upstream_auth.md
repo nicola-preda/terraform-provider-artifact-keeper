@@ -46,7 +46,7 @@ variable "upstream_password" {
 - `password` (String, Sensitive) Password for `basic` auth or the token for `bearer` auth. Not returned by the API. Conflicts with `password_wo`.
 - `password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only alternative to `password`, never stored in plan or state. Needs Terraform 1.11 or OpenTofu 1.11 or later. Bump `password_wo_version` to send a new value.
 - `password_wo_version` (Number) Change this to send `password_wo` again, the write-only value itself is not compared between runs.
-- `username` (String, Sensitive) Username for `basic` auth. Not returned by the API.
+- `username` (String) Username for `basic` auth. Not returned by the API.
 
 ### Read-Only
 
