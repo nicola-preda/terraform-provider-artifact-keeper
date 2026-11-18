@@ -98,7 +98,7 @@ func (r *repositoryUpstreamFilterResource) Read(ctx context.Context, req resourc
 		resp.Diagnostics.AddError("Error reading upstream filter", err.Error())
 		return
 	}
-	m, d := upstreamFilterToModel(ctx, state.RepositoryKey.ValueString(), f)
+	m, d := upstreamFilterToModel(ctx, state, f)
 	resp.Diagnostics.Append(d...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, m)...)
 }
@@ -129,7 +129,7 @@ func (r *repositoryUpstreamFilterResource) put(ctx context.Context, plan reposit
 		diags.AddError("Error saving upstream filter", err.Error())
 		return
 	}
-	m, d := upstreamFilterToModel(ctx, key, f)
+	m, d := upstreamFilterToModel(ctx, plan, f)
 	diags.Append(d...)
 	diags.Append(state.Set(ctx, m)...)
 }
@@ -149,17 +149,18 @@ func (r *repositoryUpstreamFilterResource) ImportState(ctx context.Context, req 
 	resource.ImportStatePassthroughID(ctx, path.Root("repository_key"), req, resp)
 }
 
-// upstreamFilterToModel folds an empty list back to null so an unset list
-// round-trips.
-func upstreamFilterToModel(ctx context.Context, key string, f *client.UpstreamFilterResponse) (repositoryUpstreamFilterResourceModel, diag.Diagnostics) {
+// upstreamFilterToModel takes the list shapes (null or []) from prior, the API
+// answers [] for both
+func upstreamFilterToModel(ctx context.Context, prior repositoryUpstreamFilterResourceModel, f *client.UpstreamFilterResponse) (repositoryUpstreamFilterResourceModel, diag.Diagnostics) {
+	key := prior.RepositoryKey.ValueString()
 	inc, diags := stringListValue(ctx, nonEmpty(f.IncludePatterns))
 	exc, d := stringListValue(ctx, nonEmpty(f.ExcludePatterns))
 	diags.Append(d...)
 	return repositoryUpstreamFilterResourceModel{
 		ID:              types.StringValue(key),
 		RepositoryKey:   types.StringValue(key),
-		IncludePatterns: inc,
-		ExcludePatterns: exc,
+		IncludePatterns: keepEmptyList(prior.IncludePatterns, inc),
+		ExcludePatterns: keepEmptyList(prior.ExcludePatterns, exc),
 		Active:          types.BoolValue(f.Active),
 	}, diags
 }

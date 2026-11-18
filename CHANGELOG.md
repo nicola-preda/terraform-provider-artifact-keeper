@@ -5,6 +5,12 @@ All notable changes to this provider are documented here. The format is based on
 the Artifact Keeper release it is validated against (`v1.10.2` = Artifact Keeper 1.10.2);
 see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
+## [Unreleased]
+
+### Fixed
+
+- **`artifactkeeper_repository_upstream_filter` failed with "Provider produced inconsistent result after apply" when `include_patterns` or `exclude_patterns` was `[]`** (#7). The API answers `[]` for an empty and an unset list alike and the provider read both back as null, it now keeps what the config says
+
 ## [1.12.0] - 2026-11-18
 
 Validated against Artifact Keeper 1.12.0. No management route the provider calls moved, and the only consumed field removed is `allow_anonymous_download` on `/admin/settings` (#5652).

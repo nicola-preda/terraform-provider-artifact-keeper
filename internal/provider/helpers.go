@@ -38,6 +38,16 @@ func stringListValue(ctx context.Context, vals []string) (types.List, diag.Diagn
 	return types.ListValueFrom(ctx, types.StringType, vals)
 }
 
+// keepEmptyList returns prior when the API read back null for a list the
+// config set to [], many endpoints answer the same for an empty and an unset
+// list (#7)
+func keepEmptyList(prior, got types.List) types.List {
+	if got.IsNull() && !prior.IsNull() && !prior.IsUnknown() && len(prior.Elements()) == 0 {
+		return prior
+	}
+	return got
+}
+
 // stringMapValue converts a Go string map into a types.Map, returning a null
 // map for a nil map.
 func stringMapValue(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
