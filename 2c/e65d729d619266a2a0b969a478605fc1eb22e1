@@ -1,0 +1,68 @@
+internal/provider/writeonly_test.go
+  s_7295de5a5caaa6::t_930e011789684f 1-109
+  s_7295de5a5caaa6::t_cb70918eae194b 110-252
+internal/provider/repository_upstream_auth_resource.go
+  s_7295de5a5caaa6::t_a07385a1db697c 41-42,64,91,93-94,154,205
+internal/provider/writeonly.go
+  s_7295de5a5caaa6::t_74dc4e4100656e 1-52
+  s_7295de5a5caaa6::t_a313efbe4c2353 53-58
+internal/provider/sso_oidc_resource.go
+  s_7295de5a5caaa6::t_d51c4f69c0148a 7,36-52,68,88,90-91,93-94,137,152,176,181,183,189,211
+CHANGELOG.md
+  s_7295de5a5caaa6::t_2fdfea9e9acc3a 10-20
+README.md
+  s_7295de5a5caaa6::t_34551c2de41f93 80
+docs/resources/migration_source.md
+  s_7295de5a5caaa6::t_9d5035965a29ff 46-53
+docs/resources/peer.md
+  s_7295de5a5caaa6::t_6f93b00b9f8a69 41-45
+docs/resources/remote_instance.md
+  s_7295de5a5caaa6::t_d929cd84a5f61c 38-45
+docs/resources/repository_egress_proxy.md
+  s_7295de5a5caaa6::t_f4265562a8741d 43-44,46-48
+docs/resources/repository_upstream_auth.md
+  s_7295de5a5caaa6::t_c14a65da0ed46b 42-43,46-48
+docs/resources/sso_ldap.md
+  s_7295de5a5caaa6::t_fe78fb8c2883ee 43-44,47-49
+docs/resources/sso_oidc.md
+  s_7295de5a5caaa6::t_c83aea4b369b29 44-45,49-51
+docs/resources/user.md
+  s_7295de5a5caaa6::t_1014ee11e87bdc 37-38,42-44
+docs/resources/webhook.md
+  s_7295de5a5caaa6::t_93790b44b28667 51-52,58-60
+internal/provider/migration_source_resource.go
+  s_7295de5a5caaa6::t_e92163431fe8ad 31-44,52-53,86,89-90,100,103-104,130,132,135-137,152-153,178-179
+internal/provider/peer_resource.go
+  s_7295de5a5caaa6::t_1e49fadc6fd88f 6,14,39-40,54,84,86-87,90-95,122-127,144,167
+internal/provider/remote_instance_resource.go
+  s_7295de5a5caaa6::t_b507c79596ea36 6,12,31-37,45,65,67-68,71-72,93-103,111,134
+internal/provider/repository_egress_proxy_resource.go
+  s_7295de5a5caaa6::t_511d9003af7221 37-38,48,70,72-73,97-101,135-139,169-170,173,186-188,203,205
+internal/provider/repository_egress_proxy_test.go
+  s_7295de5a5caaa6::t_7ea19356b446e1 62-76
+internal/provider/sso_ldap_resource.go
+  s_7295de5a5caaa6::t_5ef50a7e9b7100 31-55,67,71-95,110-115,122,144,150,152-157,161,168
+internal/provider/user_resource.go
+  s_7295de5a5caaa6::t_5e08859e00fa1a 34-35,51,58-60,86,92-94,117,139,159-165,171-172,178-179
+internal/provider/webhook_resource.go
+  s_7295de5a5caaa6::t_58464e72e3d373 40-41,59,88,91-92,180-186,224,227,231-232,264,296
+internal/provider/writeonly_acc_test.go
+  s_7295de5a5caaa6::t_123fdec1514e53 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2ce65d729d619266a2a0b969a478605fc1eb22e1",
+  "prompts": {},
+  "sessions": {
+    "s_7295de5a5caaa6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c56cd63b-ec7b-4cb0-bc81-e8eb3a40f352",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
