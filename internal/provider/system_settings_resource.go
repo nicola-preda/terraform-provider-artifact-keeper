@@ -75,13 +75,14 @@ func (r *systemSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"allow_anonymous_download": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Whether unauthenticated clients may download artifacts.",
+				MarkdownDescription: "Whether unauthenticated clients may download artifacts. Never enforced by the backend and removed in Artifact Keeper 1.12, which refuses it with `400`: anonymous access is `guest_access_enabled` on `artifactkeeper_runtime_settings`. Null when the backend no longer reports it.",
+				DeprecationMessage:  "Removed in Artifact Keeper 1.12, which refuses it with 400. Use guest_access_enabled on artifactkeeper_runtime_settings.",
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"max_upload_size_bytes": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Maximum artifact upload size, in bytes.",
+				MarkdownDescription: "Maximum artifact upload size, in bytes. From Artifact Keeper 1.12 this is the `MAX_UPLOAD_SIZE` limit in force and read-only: a value other than the current one is refused with `400`.",
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"retention_days": schema.Int64Attribute{
@@ -197,7 +198,7 @@ func systemSettingsRequestFromModel(m systemSettingsResourceModel, cur *client.S
 	req := *cur // start from current server state (incl. read-only fields)
 
 	if !m.AllowAnonymousDownload.IsNull() && !m.AllowAnonymousDownload.IsUnknown() {
-		req.AllowAnonymousDownload = m.AllowAnonymousDownload.ValueBool()
+		req.AllowAnonymousDownload = m.AllowAnonymousDownload.ValueBoolPointer()
 	}
 	if !m.MaxUploadSizeBytes.IsNull() && !m.MaxUploadSizeBytes.IsUnknown() {
 		req.MaxUploadSizeBytes = m.MaxUploadSizeBytes.ValueInt64()
@@ -223,7 +224,7 @@ func systemSettingsToModel(s *client.SystemSettings) systemSettingsResourceModel
 		StorageBackend:            types.StringValue(s.StorageBackend),
 		StoragePath:               types.StringValue(s.StoragePath),
 		Environment:               types.StringValue(s.Environment),
-		AllowAnonymousDownload:    types.BoolValue(s.AllowAnonymousDownload),
+		AllowAnonymousDownload:    types.BoolPointerValue(s.AllowAnonymousDownload),
 		MaxUploadSizeBytes:        types.Int64Value(s.MaxUploadSizeBytes),
 		RetentionDays:             types.Int64Value(s.RetentionDays),
 		AuditRetentionDays:        types.Int64Value(s.AuditRetentionDays),

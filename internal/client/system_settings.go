@@ -7,13 +7,14 @@ import (
 
 // SystemSettings mirrors the /admin/settings singleton (always exists; no
 // create/delete). storage_backend/storage_path/environment are read-only, but
-// storage_backend and storage_path must still be sent on update (no serde
-// default).
+// storage_backend and storage_path must still be sent on update before AK 1.12
+// (no serde default). AK 1.12 dropped allow_anonymous_download and refuses it
+// with 400, so it is a pointer and only sent back when the GET returned it.
 type SystemSettings struct {
 	StorageBackend            string `json:"storage_backend"`
 	StoragePath               string `json:"storage_path"`
 	Environment               string `json:"environment"`
-	AllowAnonymousDownload    bool   `json:"allow_anonymous_download"`
+	AllowAnonymousDownload    *bool  `json:"allow_anonymous_download,omitempty"`
 	MaxUploadSizeBytes        int64  `json:"max_upload_size_bytes"`
 	RetentionDays             int64  `json:"retention_days"`
 	AuditRetentionDays        int64  `json:"audit_retention_days"`
