@@ -37,9 +37,11 @@ not need changes unless a **consumed** endpoint/field changed.
 
 | | |
 |---|---|
-| Validated against | **Artifact Keeper 1.12.1** (2026-11-18) |
-| Provider changes needed | none, 1.12.1 is 1.12.0 plus the Windows build fix (`services/oci_rootfs.rs`) and a dependency update |
-| Acceptance suite | run live against the `ghcr.io` 1.12.1 image with `docker-compose.test.yml` on 2026-11-18: 20/20 |
+| Validated against | **Artifact Keeper 1.12.2** (2026-11-19) |
+| Provider changes needed | none, 1.12.2 adds no route and changes no request or response the provider uses |
+| Acceptance suite | run live against the `ghcr.io` 1.12.2 image with `docker-compose.test.yml` on 2026-11-19: 22/22 |
+
+1.12.2 (60 commits over 1.12.1) is format handler, proxy, scan and migration fixes. The route table is unchanged and the struct diff only adds fields the provider does not use (`CurationBlock.unavailable`, Nexus asset listing, `QuotaDenial.additional_bytes`). Behaviour the provider can see: deleting a user, service account or group now deletes its permission rules (migration 398, #5608), so `artifactkeeper_permission` on a deleted principal refreshes as gone. Renaming a repository key now needs the authority to create a repository (#6185), the provider replaces on a key change and never renames.
 
 1.12.1 (one commit over 1.12.0) touches no handler, model, route or migration, only `services/oci_rootfs.rs`, the OpenAPI version string, release files and `Cargo.lock`.
 
@@ -597,7 +599,7 @@ edit those and run `go generate ./...`; don't hand-edit `docs/`.
 
 ## Acceptance tests
 
-`docker-compose.test.yml` boots a minimal 1.12.1 backend (Postgres + OpenSearch + the
+`docker-compose.test.yml` boots a minimal 1.12.2 backend (Postgres + OpenSearch + the
 pinned backend image; `ADMIN_PASSWORD=admin`, `JWT_SECRET` must be ≥32 chars). Run:
 
 ```sh
