@@ -22,8 +22,8 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ### Security
 
-- Dependencies bumped for advisories reported against the provider binary: `golang.org/x/net` 0.58.0 to 0.62.0 (GO-2026-6612 and others), `golang.org/x/crypto` 0.55.0 to 0.58.0, `golang.org/x/mod` to 0.43.0, `github.com/yuin/goldmark` to 1.7.17
-- `toolchain go1.26.10` in `go.mod`: the new `go 1.26.0` line would otherwise make the release workflows build with Go 1.26.0 and its stdlib HTTP/2 advisories
+- Dependencies bumped for advisories reported against the provider binary: `golang.org/x/net` 0.58.0 to 0.63.0 (GO-2026-6612 and others), `golang.org/x/crypto` 0.55.0 to 0.59.0, `golang.org/x/mod` to 0.43.0, `github.com/yuin/goldmark` to 1.7.17, plus the rest of the indirect tree to current (`google.golang.org/grpc` 1.85.0, `google.golang.org/protobuf` 1.36.12, `hashicorp/go-plugin` 1.8.0). The direct dependencies were already current, `govulncheck ./...` reports nothing
+- `toolchain go1.26.11` in `go.mod`: the new `go 1.26.0` line would otherwise make the release workflows build with Go 1.26.0 and its stdlib HTTP/2 advisories
 
 ## [1.12.1] - 2026-11-18
 
