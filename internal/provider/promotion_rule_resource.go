@@ -290,6 +290,10 @@ func promotionRuleToModel(ctx context.Context, rule *client.PromotionRule) (prom
 
 func (m *promotionRuleResourceModel) keepEmpty(prior promotionRuleResourceModel) {
 	m.AllowedLicenses = keepEmptyList(prior.AllowedLicenses, m.AllowedLicenses)
+	// An update sends [] for an unset list, which the server then echoes back
+	if prior.AllowedLicenses.IsNull() && !m.AllowedLicenses.IsNull() && len(m.AllowedLicenses.Elements()) == 0 {
+		m.AllowedLicenses = prior.AllowedLicenses
+	}
 }
 
 // acceptedGradeStatusAttribute is shared by promotion rules and quality gates

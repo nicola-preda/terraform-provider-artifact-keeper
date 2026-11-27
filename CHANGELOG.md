@@ -19,6 +19,7 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ### Fixed
 
+- Updating an `artifactkeeper_promotion_rule` that does not set `allowed_licenses` failed with an inconsistent result (`was null, but now []`): the update sends an empty list, which the server echoes back. An unset list now stays unset
 - Removing `password` from an `artifactkeeper_user` config kept the old value in state, which Terraform reports as an inconsistent result. The password is left as is on the server and dropped from state
 
 ### Security
