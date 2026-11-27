@@ -1,0 +1,100 @@
+internal/provider/v1_12_fields_acc_test.go
+  s_7295de5a5caaa6::t_652743dd678c10 1-147
+CHANGELOG.md
+  s_7295de5a5caaa6::t_e63cdf1d78f7f4 12
+docs/resources/age_gate.md
+  s_7295de5a5caaa6::t_318832a18b2e21 36
+docs/resources/peer.md
+  s_7295de5a5caaa6::t_4589c412b9e9de 48
+docs/resources/promotion_rule.md
+  s_7295de5a5caaa6::t_1b3c3b45c82336 46
+docs/resources/quality_gate.md
+  s_7295de5a5caaa6::t_eacc29ecb9dfca 51
+docs/resources/repository_security.md
+  s_7295de5a5caaa6::t_8952dc6f36c33f 38
+docs/resources/runtime_settings.md
+  s_7295de5a5caaa6::t_fc19d1783a8e19 32-36,43-44
+docs/resources/security_policy.md
+  s_7295de5a5caaa6::t_e8adcffd35d61f 50
+docs/resources/user_api_token.md
+  s_7295de5a5caaa6::t_197098415898d3 44
+internal/client/age_gate.go
+  s_7295de5a5caaa6::t_364cab8edcada8 19-21,31-33
+internal/client/peer.go
+  s_7295de5a5caaa6::t_514ac8b01fd672 5,25-26,28-33
+internal/client/promotion_rule.go
+  s_7295de5a5caaa6::t_ca52b69d1f0013 13-27,34-45,52-61
+internal/client/quality_gate.go
+  s_7295de5a5caaa6::t_4ca0c4cf31f0f2 11-29,38-52,59-73
+internal/client/repository_security.go
+  s_7295de5a5caaa6::t_8aefff5a353ac6 22-27,45-47
+internal/client/runtime_settings.go
+  s_7295de5a5caaa6::t_fe453d149f4921 21-31,37-39
+internal/client/security_policy.go
+  s_7295de5a5caaa6::t_44605bd79699d8 19,38,54
+internal/client/user_api_token.go
+  s_7295de5a5caaa6::t_2d0ffb5619ac25 5,16-19
+internal/provider/age_gate_resource.go
+  s_7295de5a5caaa6::t_048f186a574c38 32-36,72-77,96-99,137-140,175-179
+internal/provider/peer_resource.go
+  s_7295de5a5caaa6::t_71093d319f7c33 5,39,92-96,130-132,154,178
+internal/provider/promotion_rule_resource.go
+  s_7295de5a5caaa6::t_5500aa8ac85d65 6,14,35-49,102,163,241,273-287,294-306
+internal/provider/quality_gate_resource.go
+  s_7295de5a5caaa6::t_cc9003795ece14 35-53,85-92,159,255,327-345
+internal/provider/repository_security_resource.go
+  s_7295de5a5caaa6::t_be50440985b0ed 43,109-114,218,233
+internal/provider/runtime_settings_resource.go
+  s_7295de5a5caaa6::t_c48cd5176245e3 6,10,12,35-43,77-97,113-118,123-125,135-137,146-151,156-158,170-190,195-201,203-214
+internal/provider/security_policy_resource.go
+  s_7295de5a5caaa6::t_542ee96f9f1e18 38,85-90,154,216,260
+internal/provider/user_api_token_resource.go
+  s_7295de5a5caaa6::t_794d1dd44e1c34 5,42,84-88,130-132,152,177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4ab720b2d730102405d390e4b0dbb8310280a6ae",
+  "prompts": {},
+  "sessions": {
+    "s_7295de5a5caaa6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c56cd63b-ec7b-4cb0-bc81-e8eb3a40f352",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Nicola Preda <nicola.preda@proton.ch>"
+    }
+  },
+  "token_usage": {
+    "attributable": {
+      "total": {
+        "input_tokens": 130,
+        "output_tokens": 36926,
+        "cache_creation_input_tokens": 82344,
+        "cache_read_input_tokens": 15925843
+      },
+      "by_tool_model": {
+        "claude::claude-opus-5-5": {
+          "input_tokens": 130,
+          "output_tokens": 36926,
+          "cache_creation_input_tokens": 82344,
+          "cache_read_input_tokens": 15925843
+        }
+      },
+      "tool_uses": {
+        "bash": 65,
+        "write": 1
+      }
+    },
+    "by_prompt": {
+      "s_7295de5a5caaa6": {
+        "input_tokens": 130,
+        "output_tokens": 36926,
+        "cache_creation_input_tokens": 82344,
+        "cache_read_input_tokens": 15925843
+      }
+    }
+  },
+  "proton_build": "1.7.6-proton.8"
+}
