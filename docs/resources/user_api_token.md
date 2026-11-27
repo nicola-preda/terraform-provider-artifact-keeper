@@ -41,6 +41,7 @@ output "release_bot_token" {
 ### Optional
 
 - `expires_in_days` (Number) Days until expiry (1-365). Omit for a non-expiring token.
+- `repo_selector` (String) Restrict the token to the repositories this selector matches, as a JSON object, e.g. `jsonencode({ match_formats = ["docker"] })`. Keys are `match_formats`, `match_labels`, `match_pattern` and `match_repos`; the server refuses an empty or unknown-key selector. It only narrows the user's own repository permissions, and a repository created later that matches is picked up within 5 minutes. Requires Artifact Keeper 1.12.0 or later. Its configured value is preserved in state. Changing this forces a new token.
 
 ### Read-Only
 

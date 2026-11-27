@@ -16,6 +16,7 @@ type SecurityPolicy struct {
 	MaxSeverity        string          `json:"max_severity"`
 	BlockUnscanned     bool            `json:"block_unscanned"`
 	BlockOnFail        bool            `json:"block_on_fail"`
+	BlockUncataloged   bool            `json:"block_uncataloged"`
 	IsEnabled          bool            `json:"is_enabled"`
 	MinStagingHours    *int64          `json:"min_staging_hours"`
 	MaxArtifactAgeDays *int64          `json:"max_artifact_age_days"`
@@ -34,6 +35,7 @@ type CreateSecurityPolicyRequest struct {
 	MaxSeverity        string          `json:"max_severity"`
 	BlockUnscanned     *bool           `json:"block_unscanned,omitempty"`
 	BlockOnFail        bool            `json:"block_on_fail"`
+	BlockUncataloged   *bool           `json:"block_uncataloged,omitempty"`
 	MinStagingHours    *int64          `json:"min_staging_hours,omitempty"`
 	MaxArtifactAgeDays *int64          `json:"max_artifact_age_days,omitempty"`
 	RequireSignature   *bool           `json:"require_signature,omitempty"`
@@ -49,6 +51,7 @@ type UpdateSecurityPolicyRequest struct {
 	MaxSeverity        *string         `json:"max_severity,omitempty"`
 	BlockUnscanned     *bool           `json:"block_unscanned,omitempty"`
 	BlockOnFail        *bool           `json:"block_on_fail,omitempty"`
+	BlockUncataloged   *bool           `json:"block_uncataloged,omitempty"`
 	IsEnabled          *bool           `json:"is_enabled,omitempty"`
 	MinStagingHours    *int64          `json:"min_staging_hours,omitempty"`
 	MaxArtifactAgeDays *int64          `json:"max_artifact_age_days,omitempty"`

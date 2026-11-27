@@ -48,6 +48,7 @@ resource "artifactkeeper_quality_gate" "docker_warn" {
 
 ### Optional
 
+- `accepted_grade_status` (String) The weakest grade status of the repository that `min_health_score` accepts (Artifact Keeper 1.12.0, #4994): `rated` (the server default: a repository whose scans failed, cataloged nothing or assessed only in part fails whatever the score), `incomplete` (only a repository with nothing assessed fails) or `any` (the score alone decides, the behaviour before 1.12). Not checked when `min_health_score` is unset.
 - `action` (String) Action to take when the gate fails: `allow`, `warn`, or `block`. Defaults to `warn`.
 - `description` (String) Free-form description of the gate.
 - `enforce_on_download` (Boolean) Whether the gate is enforced on download. Defaults to `false`.

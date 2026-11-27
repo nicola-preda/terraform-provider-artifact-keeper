@@ -29,12 +29,19 @@ resource "artifactkeeper_runtime_settings" "this" {
 
 - `guest_access_enabled` (Boolean) Allow (`true`) or refuse (`false`) anonymous access server-wide. Refusing it also makes creating a public repository a `400`.
 
+### Optional
+
+- `hidden_nav_items` (Set of String) Web UI navigation entries hidden for every user, as route paths such as `/peers` (Artifact Keeper 1.12.0, #4574). Display only: a hidden page stays reachable by URL and keeps its permission checks. Each entry is 1 to 128 characters of ASCII letters, digits, `/`, `-`, `_` or `.`, at most 200. An empty set shows every entry; left unset, the server's list is kept.
+- `upstream_jobs_paused` (Boolean) Pause (`true`) or resume (`false`) every scheduled job that contacts an upstream on its own: curation sync, environment re-evaluation, the npm replication feed, peer replication transfers and scheduled mirror passes (Artifact Keeper 1.12.0, #5288). `UPSTREAM_JOBS_PAUSED=true` keeps them paused whatever is stored. Left unset, the stored value is kept.
+
 ### Read-Only
 
 - `guest_access_editable` (Boolean) `false` while `AK_GUEST_ACCESS_ENABLED` pins the value.
 - `guest_access_in_force` (Boolean) The value the server enforces right now, which differs from `guest_access_enabled` while the environment pins it.
 - `guest_access_source` (String) Where the value in force comes from: `environment`, `database` or `default`.
 - `id` (String) Fixed identifier for the singleton (always `runtime_settings`).
+- `upstream_jobs_paused_in_force` (Boolean) Whether upstream jobs are paused right now, which differs from `upstream_jobs_paused` while the environment pins it.
+- `upstream_jobs_paused_source` (String) Where the pause in force comes from: `environment`, `database`, `default` or `unavailable` (the setting could not be read, jobs are treated as paused).
 
 ## Import
 

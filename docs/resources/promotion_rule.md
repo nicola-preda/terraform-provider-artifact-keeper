@@ -43,6 +43,7 @@ resource "artifactkeeper_promotion_rule" "staging_to_release" {
 
 ### Optional
 
+- `accepted_grade_status` (String) The weakest grade status of the repository that `min_health_score` accepts (Artifact Keeper 1.12.0, #4994): `rated` (the server default: a repository whose scans failed, cataloged nothing or assessed only in part fails whatever the score), `incomplete` (only a repository with nothing assessed fails) or `any` (the score alone decides, the behaviour before 1.12). Not checked when `min_health_score` is unset.
 - `allowed_licenses` (List of String) Allowed SPDX license identifiers. Omit to impose no license gate.
 - `auto_promote` (Boolean) Automatically promote artifacts that pass every gate. Defaults to `false`.
 - `is_enabled` (Boolean) Whether the rule is active. Defaults to `true`.

@@ -32,24 +32,25 @@ type qualityGateResource struct {
 }
 
 type qualityGateResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	RepositoryID       types.String `tfsdk:"repository_id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	MinHealthScore     types.Int64  `tfsdk:"min_health_score"`
-	MinSecurityScore   types.Int64  `tfsdk:"min_security_score"`
-	MinQualityScore    types.Int64  `tfsdk:"min_quality_score"`
-	MinMetadataScore   types.Int64  `tfsdk:"min_metadata_score"`
-	MaxCriticalIssues  types.Int64  `tfsdk:"max_critical_issues"`
-	MaxHighIssues      types.Int64  `tfsdk:"max_high_issues"`
-	MaxMediumIssues    types.Int64  `tfsdk:"max_medium_issues"`
-	RequiredChecks     types.List   `tfsdk:"required_checks"`
-	EnforceOnPromotion types.Bool   `tfsdk:"enforce_on_promotion"`
-	EnforceOnDownload  types.Bool   `tfsdk:"enforce_on_download"`
-	Action             types.String `tfsdk:"action"`
-	IsEnabled          types.Bool   `tfsdk:"is_enabled"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	UpdatedAt          types.String `tfsdk:"updated_at"`
+	ID                  types.String `tfsdk:"id"`
+	RepositoryID        types.String `tfsdk:"repository_id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	MinHealthScore      types.Int64  `tfsdk:"min_health_score"`
+	AcceptedGradeStatus types.String `tfsdk:"accepted_grade_status"`
+	MinSecurityScore    types.Int64  `tfsdk:"min_security_score"`
+	MinQualityScore     types.Int64  `tfsdk:"min_quality_score"`
+	MinMetadataScore    types.Int64  `tfsdk:"min_metadata_score"`
+	MaxCriticalIssues   types.Int64  `tfsdk:"max_critical_issues"`
+	MaxHighIssues       types.Int64  `tfsdk:"max_high_issues"`
+	MaxMediumIssues     types.Int64  `tfsdk:"max_medium_issues"`
+	RequiredChecks      types.List   `tfsdk:"required_checks"`
+	EnforceOnPromotion  types.Bool   `tfsdk:"enforce_on_promotion"`
+	EnforceOnDownload   types.Bool   `tfsdk:"enforce_on_download"`
+	Action              types.String `tfsdk:"action"`
+	IsEnabled           types.Bool   `tfsdk:"is_enabled"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
 }
 
 func (r *qualityGateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -81,13 +82,14 @@ func (r *qualityGateResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:            true,
 				MarkdownDescription: "Free-form description of the gate.",
 			},
-			"min_health_score":    optionalScore("Minimum overall health score (0-100) an artifact must meet."),
-			"min_security_score":  optionalScore("Minimum security score (0-100) an artifact must meet."),
-			"min_quality_score":   optionalScore("Minimum quality score (0-100) an artifact must meet."),
-			"min_metadata_score":  optionalScore("Minimum metadata score (0-100) an artifact must meet."),
-			"max_critical_issues": optionalScore("Maximum number of critical issues allowed."),
-			"max_high_issues":     optionalScore("Maximum number of high-severity issues allowed."),
-			"max_medium_issues":   optionalScore("Maximum number of medium-severity issues allowed."),
+			"accepted_grade_status": acceptedGradeStatusAttribute(),
+			"min_health_score":      optionalScore("Minimum overall health score (0-100) an artifact must meet."),
+			"min_security_score":    optionalScore("Minimum security score (0-100) an artifact must meet."),
+			"min_quality_score":     optionalScore("Minimum quality score (0-100) an artifact must meet."),
+			"min_metadata_score":    optionalScore("Minimum metadata score (0-100) an artifact must meet."),
+			"max_critical_issues":   optionalScore("Maximum number of critical issues allowed."),
+			"max_high_issues":       optionalScore("Maximum number of high-severity issues allowed."),
+			"max_medium_issues":     optionalScore("Maximum number of medium-severity issues allowed."),
 			"required_checks": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -154,6 +156,7 @@ func (r *qualityGateResource) Create(ctx context.Context, req resource.CreateReq
 	if !plan.MinHealthScore.IsNull() {
 		createReq.MinHealthScore = plan.MinHealthScore.ValueInt64Pointer()
 	}
+	createReq.AcceptedGradeStatus = optionalString(plan.AcceptedGradeStatus)
 	if !plan.MinSecurityScore.IsNull() {
 		createReq.MinSecurityScore = plan.MinSecurityScore.ValueInt64Pointer()
 	}
@@ -249,6 +252,7 @@ func (r *qualityGateResource) Update(ctx context.Context, req resource.UpdateReq
 	if !plan.MinHealthScore.IsNull() {
 		updateReq.MinHealthScore = plan.MinHealthScore.ValueInt64Pointer()
 	}
+	updateReq.AcceptedGradeStatus = optionalString(plan.AcceptedGradeStatus)
 	if !plan.MinSecurityScore.IsNull() {
 		updateReq.MinSecurityScore = plan.MinSecurityScore.ValueInt64Pointer()
 	}
@@ -320,23 +324,24 @@ func (r *qualityGateResource) ImportState(ctx context.Context, req resource.Impo
 func qualityGateToModel(ctx context.Context, g *client.QualityGate) (qualityGateResourceModel, diag.Diagnostics) {
 	checks, diags := stringListValue(ctx, g.RequiredChecks)
 	return qualityGateResourceModel{
-		ID:                 types.StringValue(g.ID),
-		RepositoryID:       stringPointerValue(g.RepositoryID),
-		Name:               types.StringValue(g.Name),
-		Description:        stringPointerValue(g.Description),
-		MinHealthScore:     int64PointerValue(g.MinHealthScore),
-		MinSecurityScore:   int64PointerValue(g.MinSecurityScore),
-		MinQualityScore:    int64PointerValue(g.MinQualityScore),
-		MinMetadataScore:   int64PointerValue(g.MinMetadataScore),
-		MaxCriticalIssues:  int64PointerValue(g.MaxCriticalIssues),
-		MaxHighIssues:      int64PointerValue(g.MaxHighIssues),
-		MaxMediumIssues:    int64PointerValue(g.MaxMediumIssues),
-		RequiredChecks:     checks,
-		EnforceOnPromotion: types.BoolValue(g.EnforceOnPromotion),
-		EnforceOnDownload:  types.BoolValue(g.EnforceOnDownload),
-		Action:             types.StringValue(g.Action),
-		IsEnabled:          types.BoolValue(g.IsEnabled),
-		CreatedAt:          types.StringValue(g.CreatedAt),
-		UpdatedAt:          types.StringValue(g.UpdatedAt),
+		ID:                  types.StringValue(g.ID),
+		RepositoryID:        stringPointerValue(g.RepositoryID),
+		Name:                types.StringValue(g.Name),
+		Description:         stringPointerValue(g.Description),
+		MinHealthScore:      int64PointerValue(g.MinHealthScore),
+		AcceptedGradeStatus: types.StringValue(g.AcceptedGradeStatus),
+		MinSecurityScore:    int64PointerValue(g.MinSecurityScore),
+		MinQualityScore:     int64PointerValue(g.MinQualityScore),
+		MinMetadataScore:    int64PointerValue(g.MinMetadataScore),
+		MaxCriticalIssues:   int64PointerValue(g.MaxCriticalIssues),
+		MaxHighIssues:       int64PointerValue(g.MaxHighIssues),
+		MaxMediumIssues:     int64PointerValue(g.MaxMediumIssues),
+		RequiredChecks:      checks,
+		EnforceOnPromotion:  types.BoolValue(g.EnforceOnPromotion),
+		EnforceOnDownload:   types.BoolValue(g.EnforceOnDownload),
+		Action:              types.StringValue(g.Action),
+		IsEnabled:           types.BoolValue(g.IsEnabled),
+		CreatedAt:           types.StringValue(g.CreatedAt),
+		UpdatedAt:           types.StringValue(g.UpdatedAt),
 	}, diags
 }

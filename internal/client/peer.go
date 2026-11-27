@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/url"
 )
@@ -21,13 +22,15 @@ type Peer struct {
 	IsLocal         bool    `json:"is_local"`
 }
 
-// RegisterPeerRequest maps RegisterPeerRequest. sync_filter is omitted for now.
+// RegisterPeerRequest maps RegisterPeerRequest. sync_filter is accepted here
+// only, the API never returns it.
 type RegisterPeerRequest struct {
-	Name           string  `json:"name"`
-	EndpointURL    string  `json:"endpoint_url"`
-	Region         *string `json:"region,omitempty"`
-	CacheSizeBytes *int64  `json:"cache_size_bytes,omitempty"`
-	APIKey         string  `json:"api_key"`
+	Name           string          `json:"name"`
+	EndpointURL    string          `json:"endpoint_url"`
+	Region         *string         `json:"region,omitempty"`
+	CacheSizeBytes *int64          `json:"cache_size_bytes,omitempty"`
+	SyncFilter     json.RawMessage `json:"sync_filter,omitempty"`
+	APIKey         string          `json:"api_key"`
 }
 
 func (c *Client) CreatePeer(ctx context.Context, req RegisterPeerRequest) (*Peer, error) {
