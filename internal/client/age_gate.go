@@ -16,6 +16,9 @@ type AgeGateConfig struct {
 	MinAgeDays    int64  `json:"min_age_days"`
 	// Mode is the age source: upstream_publish_time or first_seen (1.7.1).
 	Mode string `json:"mode"`
+	// InstanceLocked: an instance administrator set this policy, so a
+	// repository administrator may tighten it but not relax it (#4238).
+	InstanceLocked bool `json:"instance_locked"`
 }
 
 // AgeGateConfigRequest maps UpdateAgeGateConfigRequest (PUT). Enabled and
@@ -25,6 +28,9 @@ type AgeGateConfigRequest struct {
 	Enabled    bool    `json:"enabled"`
 	MinAgeDays int64   `json:"min_age_days"`
 	Mode       *string `json:"mode,omitempty"`
+	// InstanceLocked is for instance administrators only. Omitted from one,
+	// the server locks the policy.
+	InstanceLocked *bool `json:"instance_locked,omitempty"`
 }
 
 func (c *Client) GetAgeGateConfig(ctx context.Context, repositoryKey string) (*AgeGateConfig, error) {

@@ -40,6 +40,7 @@ type repositorySecurityResourceModel struct {
 	BlockOnPolicyViolation types.Bool   `tfsdk:"block_on_policy_violation"`
 	SeverityThreshold      types.String `tfsdk:"severity_threshold"`
 	ProxyScanAction        types.String `tfsdk:"proxy_scan_action"`
+	InstanceLocked         types.Bool   `tfsdk:"instance_locked"`
 	CreatedAt              types.String `tfsdk:"created_at"`
 	UpdatedAt              types.String `tfsdk:"updated_at"`
 }
@@ -104,6 +105,12 @@ func (r *repositorySecurityResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "How the inline proxy scan gate treats a pull: `fail_open` (default, serve the artifact while a scan cannot run), `fail_closed` (refuse it), or `record_only` (scan and record every pull but never block; overrides `block_on_policy_violation` and `severity_threshold`, requires Artifact Keeper 1.11.0).",
 				Validators:          []validator.String{stringvalidator.OneOf("fail_open", "fail_closed", "record_only")},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"instance_locked": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				MarkdownDescription: "Whether repository administrators are locked out of weakening the proxy scan policy (Artifact Keeper 1.12.0, #4363): turning `scan_on_proxy` off, moving `proxy_scan_action` towards `record_only` or loosening `severity_threshold`. " +
+					"`false` hands the policy back to them. Only an instance administrator may set it, and a write from one that omits it locks the policy.",
 			},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
@@ -208,6 +215,7 @@ func securityRequestFromModel(m repositorySecurityResourceModel) client.UpdateRe
 		BlockOnPolicyViolation: optionalBool(m.BlockOnPolicyViolation),
 		SeverityThreshold:      optionalString(m.SeverityThreshold),
 		ProxyScanAction:        optionalString(m.ProxyScanAction),
+		InstanceLocked:         optionalBool(m.InstanceLocked),
 	}
 }
 
@@ -222,6 +230,7 @@ func securityToModel(repoKey string, c *client.RepositorySecurity) repositorySec
 		BlockOnPolicyViolation: types.BoolValue(c.BlockOnPolicyViolation),
 		SeverityThreshold:      types.StringValue(c.SeverityThreshold),
 		ProxyScanAction:        types.StringValue(c.ProxyScanAction),
+		InstanceLocked:         types.BoolValue(c.InstanceLocked),
 		CreatedAt:              types.StringValue(c.CreatedAt),
 		UpdatedAt:              types.StringValue(c.UpdatedAt),
 	}

@@ -19,8 +19,12 @@ type RepositorySecurity struct {
 	SeverityThreshold      string `json:"severity_threshold"`
 	// "fail_open" (default), "fail_closed" or "record_only" (1.11.0, #3645).
 	ProxyScanAction string `json:"proxy_scan_action"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
+	// InstanceLocked: an instance administrator's lock holds the proxy scan
+	// policy, a repository administrator may tighten it but not weaken it
+	// (#4363).
+	InstanceLocked bool   `json:"instance_locked"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 // repoSecurityEnvelope wraps the GET body ({config, score}); only config is
@@ -38,6 +42,9 @@ type UpdateRepositorySecurityRequest struct {
 	BlockOnPolicyViolation *bool   `json:"block_on_policy_violation,omitempty"`
 	SeverityThreshold      *string `json:"severity_threshold,omitempty"`
 	ProxyScanAction        *string `json:"proxy_scan_action,omitempty"`
+	// InstanceLocked is for instance administrators only. Omitted from one,
+	// the server locks the policy.
+	InstanceLocked *bool `json:"instance_locked,omitempty"`
 }
 
 // GetRepositorySecurity reads GET /repositories/{key}/security and returns its

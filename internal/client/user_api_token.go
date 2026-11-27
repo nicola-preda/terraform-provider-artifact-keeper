@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,9 +13,10 @@ import (
 // POST /users/{id}/tokens. Unlike the profile endpoint, `scopes` is a bare
 // (non-defaulted) field server side, so it must always be sent.
 type CreateUserApiTokenRequest struct {
-	Name          string   `json:"name"`
-	Scopes        []string `json:"scopes"`
-	ExpiresInDays *int64   `json:"expires_in_days,omitempty"`
+	Name          string          `json:"name"`
+	Scopes        []string        `json:"scopes"`
+	ExpiresInDays *int64          `json:"expires_in_days,omitempty"`
+	RepoSelector  json.RawMessage `json:"repo_selector,omitempty"`
 }
 
 // CreateUserApiToken mints a token for another user (admin), or for yourself,

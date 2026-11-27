@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -38,6 +39,7 @@ type userApiTokenResourceModel struct {
 	Name          types.String `tfsdk:"name"`
 	Scopes        types.List   `tfsdk:"scopes"`
 	ExpiresInDays types.Int64  `tfsdk:"expires_in_days"`
+	RepoSelector  types.String `tfsdk:"repo_selector"`
 	Token         types.String `tfsdk:"token"`
 	TokenPrefix   types.String `tfsdk:"token_prefix"`
 	ExpiresAt     types.String `tfsdk:"expires_at"`
@@ -78,6 +80,11 @@ func (r *userApiTokenResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:            true,
 				MarkdownDescription: "Days until expiry (1-365). Omit for a non-expiring token.",
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.RequiresReplace()},
+			},
+			"repo_selector": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Restrict the token to the repositories this selector matches, as a JSON object, e.g. `jsonencode({ match_formats = [\"docker\"] })`. Keys are `match_formats`, `match_labels`, `match_pattern` and `match_repos`; the server refuses an empty or unknown-key selector. It only narrows the user's own repository permissions, and a repository created later that matches is picked up within 5 minutes. Requires Artifact Keeper 1.12.0 or later. Its configured value is preserved in state. Changing this forces a new token.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"token": schema.StringAttribute{
 				Computed:            true,
@@ -120,6 +127,9 @@ func (r *userApiTokenResource) Create(ctx context.Context, req resource.CreateRe
 	if !plan.ExpiresInDays.IsNull() {
 		createReq.ExpiresInDays = plan.ExpiresInDays.ValueInt64Pointer()
 	}
+	if !plan.RepoSelector.IsNull() {
+		createReq.RepoSelector = json.RawMessage(plan.RepoSelector.ValueString())
+	}
 
 	userID := plan.UserID.ValueString()
 	created, err := r.client.CreateUserApiToken(ctx, userID, createReq)
@@ -139,6 +149,7 @@ func (r *userApiTokenResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(d...)
 	state.Token = types.StringValue(created.Token)
 	state.ExpiresInDays = plan.ExpiresInDays
+	state.RepoSelector = plan.RepoSelector
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
@@ -163,6 +174,7 @@ func (r *userApiTokenResource) Read(ctx context.Context, req resource.ReadReques
 	resp.Diagnostics.Append(d...)
 	refreshed.Token = state.Token // secret preserved; never returned by the API
 	refreshed.ExpiresInDays = state.ExpiresInDays
+	refreshed.RepoSelector = state.RepoSelector
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
 

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/nicola-preda/terraform-provider-artifact-keeper/internal/client"
@@ -30,20 +32,21 @@ type promotionRuleResource struct {
 // promotionRuleResourceModel maps the resource schema. Attribute names mirror
 // the Artifact Keeper API fields exactly.
 type promotionRuleResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	SourceRepoID       types.String `tfsdk:"source_repo_id"`
-	TargetRepoID       types.String `tfsdk:"target_repo_id"`
-	IsEnabled          types.Bool   `tfsdk:"is_enabled"`
-	MaxCveSeverity     types.String `tfsdk:"max_cve_severity"`
-	AllowedLicenses    types.List   `tfsdk:"allowed_licenses"`
-	RequireSignature   types.Bool   `tfsdk:"require_signature"`
-	MinStagingHours    types.Int64  `tfsdk:"min_staging_hours"`
-	MaxArtifactAgeDays types.Int64  `tfsdk:"max_artifact_age_days"`
-	MinHealthScore     types.Int64  `tfsdk:"min_health_score"`
-	AutoPromote        types.Bool   `tfsdk:"auto_promote"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	UpdatedAt          types.String `tfsdk:"updated_at"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	SourceRepoID        types.String `tfsdk:"source_repo_id"`
+	TargetRepoID        types.String `tfsdk:"target_repo_id"`
+	IsEnabled           types.Bool   `tfsdk:"is_enabled"`
+	MaxCveSeverity      types.String `tfsdk:"max_cve_severity"`
+	AllowedLicenses     types.List   `tfsdk:"allowed_licenses"`
+	RequireSignature    types.Bool   `tfsdk:"require_signature"`
+	MinStagingHours     types.Int64  `tfsdk:"min_staging_hours"`
+	MaxArtifactAgeDays  types.Int64  `tfsdk:"max_artifact_age_days"`
+	MinHealthScore      types.Int64  `tfsdk:"min_health_score"`
+	AcceptedGradeStatus types.String `tfsdk:"accepted_grade_status"`
+	AutoPromote         types.Bool   `tfsdk:"auto_promote"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
 }
 
 func (r *promotionRuleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -96,6 +99,7 @@ func (r *promotionRuleResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:            true,
 				MarkdownDescription: "Maximum age in days an artifact may have to be eligible for promotion.",
 			},
+			"accepted_grade_status": acceptedGradeStatusAttribute(),
 			"min_health_score": schema.Int64Attribute{
 				Optional:            true,
 				MarkdownDescription: "Minimum health score (0-100) an artifact must meet.",
@@ -156,6 +160,7 @@ func (r *promotionRuleResource) Create(ctx context.Context, req resource.CreateR
 	if !plan.MinHealthScore.IsNull() {
 		createReq.MinHealthScore = plan.MinHealthScore.ValueInt64Pointer()
 	}
+	createReq.AcceptedGradeStatus = optionalString(plan.AcceptedGradeStatus)
 
 	rule, err := r.client.CreatePromotionRule(ctx, createReq)
 	if err != nil {
@@ -233,6 +238,7 @@ func (r *promotionRuleResource) Update(ctx context.Context, req resource.UpdateR
 	if !plan.MinHealthScore.IsNull() {
 		updateReq.MinHealthScore = plan.MinHealthScore.ValueInt64Pointer()
 	}
+	updateReq.AcceptedGradeStatus = optionalString(plan.AcceptedGradeStatus)
 
 	rule, err := r.client.UpdatePromotionRule(ctx, plan.ID.ValueString(), updateReq)
 	if err != nil {
@@ -264,23 +270,41 @@ func (r *promotionRuleResource) ImportState(ctx context.Context, req resource.Im
 func promotionRuleToModel(ctx context.Context, rule *client.PromotionRule) (promotionRuleResourceModel, diag.Diagnostics) {
 	licenses, diags := stringListValue(ctx, rule.AllowedLicenses)
 	return promotionRuleResourceModel{
-		ID:                 types.StringValue(rule.ID),
-		Name:               types.StringValue(rule.Name),
-		SourceRepoID:       types.StringValue(rule.SourceRepoID),
-		TargetRepoID:       types.StringValue(rule.TargetRepoID),
-		IsEnabled:          types.BoolValue(rule.IsEnabled),
-		MaxCveSeverity:     stringPointerValue(rule.MaxCveSeverity),
-		AllowedLicenses:    licenses,
-		RequireSignature:   types.BoolValue(rule.RequireSignature),
-		MinStagingHours:    int64PointerValue(rule.MinStagingHours),
-		MaxArtifactAgeDays: int64PointerValue(rule.MaxArtifactAgeDays),
-		MinHealthScore:     int64PointerValue(rule.MinHealthScore),
-		AutoPromote:        types.BoolValue(rule.AutoPromote),
-		CreatedAt:          types.StringValue(rule.CreatedAt),
-		UpdatedAt:          types.StringValue(rule.UpdatedAt),
+		ID:                  types.StringValue(rule.ID),
+		Name:                types.StringValue(rule.Name),
+		SourceRepoID:        types.StringValue(rule.SourceRepoID),
+		TargetRepoID:        types.StringValue(rule.TargetRepoID),
+		IsEnabled:           types.BoolValue(rule.IsEnabled),
+		MaxCveSeverity:      stringPointerValue(rule.MaxCveSeverity),
+		AllowedLicenses:     licenses,
+		RequireSignature:    types.BoolValue(rule.RequireSignature),
+		MinStagingHours:     int64PointerValue(rule.MinStagingHours),
+		MaxArtifactAgeDays:  int64PointerValue(rule.MaxArtifactAgeDays),
+		MinHealthScore:      int64PointerValue(rule.MinHealthScore),
+		AcceptedGradeStatus: types.StringValue(rule.AcceptedGradeStatus),
+		AutoPromote:         types.BoolValue(rule.AutoPromote),
+		CreatedAt:           types.StringValue(rule.CreatedAt),
+		UpdatedAt:           types.StringValue(rule.UpdatedAt),
 	}, diags
 }
 
 func (m *promotionRuleResourceModel) keepEmpty(prior promotionRuleResourceModel) {
 	m.AllowedLicenses = keepEmptyList(prior.AllowedLicenses, m.AllowedLicenses)
+	// An update sends [] for an unset list, which the server then echoes back
+	if prior.AllowedLicenses.IsNull() && !m.AllowedLicenses.IsNull() && len(m.AllowedLicenses.Elements()) == 0 {
+		m.AllowedLicenses = prior.AllowedLicenses
+	}
+}
+
+// acceptedGradeStatusAttribute is shared by promotion rules and quality gates
+func acceptedGradeStatusAttribute() schema.StringAttribute {
+	return schema.StringAttribute{
+		Optional: true,
+		Computed: true,
+		MarkdownDescription: "The weakest grade status of the repository that `min_health_score` accepts (Artifact Keeper 1.12.0, #4994): " +
+			"`rated` (the server default: a repository whose scans failed, cataloged nothing or assessed only in part fails whatever the score), " +
+			"`incomplete` (only a repository with nothing assessed fails) or `any` (the score alone decides, the behaviour before 1.12). Not checked when `min_health_score` is unset.",
+		Validators:    []validator.String{stringvalidator.OneOf("rated", "incomplete", "any")},
+		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+	}
 }

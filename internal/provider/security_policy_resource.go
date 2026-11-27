@@ -35,6 +35,7 @@ type securityPolicyResourceModel struct {
 	MaxSeverity        types.String `tfsdk:"max_severity"`
 	BlockUnscanned     types.Bool   `tfsdk:"block_unscanned"`
 	BlockOnFail        types.Bool   `tfsdk:"block_on_fail"`
+	BlockUncataloged   types.Bool   `tfsdk:"block_uncataloged"`
 	IsEnabled          types.Bool   `tfsdk:"is_enabled"`
 	MinStagingHours    types.Int64  `tfsdk:"min_staging_hours"`
 	MaxArtifactAgeDays types.Int64  `tfsdk:"max_artifact_age_days"`
@@ -80,6 +81,12 @@ func (r *securityPolicyResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"block_on_fail": schema.BoolAttribute{
 				Required:            true,
 				MarkdownDescription: "Block artifacts whose scan failed to run.",
+			},
+			"block_uncataloged": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Block an artifact no scanner could catalog (`scan_completeness = not_cataloged`): its zero findings mean nothing was assessed, not clean (Artifact Keeper 1.12.0, #4994). Defaults to `false`.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"is_enabled": schema.BoolAttribute{
 				Optional:            true,
@@ -144,6 +151,7 @@ func (r *securityPolicyResource) Create(ctx context.Context, req resource.Create
 	if !plan.RequireSignature.IsNull() && !plan.RequireSignature.IsUnknown() {
 		createReq.RequireSignature = plan.RequireSignature.ValueBoolPointer()
 	}
+	createReq.BlockUncataloged = optionalBool(plan.BlockUncataloged)
 	if !plan.MinStagingHours.IsNull() {
 		createReq.MinStagingHours = plan.MinStagingHours.ValueInt64Pointer()
 	}
@@ -205,6 +213,7 @@ func (r *securityPolicyResource) Update(ctx context.Context, req resource.Update
 		MaxSeverity:      plan.MaxSeverity.ValueStringPointer(),
 		BlockUnscanned:   plan.BlockUnscanned.ValueBoolPointer(),
 		BlockOnFail:      plan.BlockOnFail.ValueBoolPointer(),
+		BlockUncataloged: optionalBool(plan.BlockUncataloged),
 		IsEnabled:        plan.IsEnabled.ValueBoolPointer(),
 		RequireSignature: plan.RequireSignature.ValueBoolPointer(),
 	}
@@ -248,6 +257,7 @@ func securityPolicyToModel(p *client.SecurityPolicy, prior securityPolicyResourc
 		MaxSeverity:        types.StringValue(p.MaxSeverity),
 		BlockUnscanned:     types.BoolValue(p.BlockUnscanned),
 		BlockOnFail:        types.BoolValue(p.BlockOnFail),
+		BlockUncataloged:   types.BoolValue(p.BlockUncataloged),
 		IsEnabled:          types.BoolValue(p.IsEnabled),
 		MinStagingHours:    int64PointerValue(p.MinStagingHours),
 		MaxArtifactAgeDays: int64PointerValue(p.MaxArtifactAgeDays),

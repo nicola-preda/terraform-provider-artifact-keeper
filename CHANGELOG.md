@@ -9,6 +9,7 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ### Added
 
+- **1.12 fields on existing resources**, each updated in place unless noted: `hidden_nav_items` and `upstream_jobs_paused` (with `upstream_jobs_paused_source` and `upstream_jobs_paused_in_force`) on `artifactkeeper_runtime_settings`, `block_uncataloged` on `artifactkeeper_security_policy`, `accepted_grade_status` on `artifactkeeper_promotion_rule` and `artifactkeeper_quality_gate`, `instance_locked` on `artifactkeeper_age_gate` and `artifactkeeper_repository_security`, `sync_filter` on `artifactkeeper_peer` and `repo_selector` on `artifactkeeper_user_api_token` (both set at creation only and never returned, so a change replaces the resource)
 - **`is_admin`** on `artifactkeeper_service_account`. The server creates service accounts as non-administrators and the service-account endpoints neither accept nor return the flag, but a service account is a row in `users`, so the provider sets it with `PATCH /users/{id}` and reads it with `GET /users/{id}`. Lets a configuration give its own automation an administrator service account instead of a local user. A token of such an account is an administrator only when minted with the `admin` (or `*`) scope, the scope gate is unchanged
 - **`token_ttl_secs`** on `artifactkeeper_ci_oidc_provider` (Artifact Keeper 1.12.0): the lifetime in seconds of the access token an exchange through the provider mints, `60` to `3600`, default `900`
 - **Write-only `_wo` variants for caller-supplied secrets** (#6), each with a `_wo_version` to send a new value. The value is never stored in plan or state and needs Terraform 1.11+ or OpenTofu 1.11+, the plain attributes are unchanged and still work down to the 1.5.7 floor
@@ -18,6 +19,7 @@ see [MAINTAINING.md](MAINTAINING.md#versioning--releasing).
 
 ### Fixed
 
+- Updating an `artifactkeeper_promotion_rule` that does not set `allowed_licenses` failed with an inconsistent result (`was null, but now []`): the update sends an empty list, which the server echoes back. An unset list now stays unset
 - Removing `password` from an `artifactkeeper_user` config kept the old value in state, which Terraform reports as an inconsistent result. The password is left as is on the server and dropped from state
 
 ### Security

@@ -35,6 +35,7 @@ resource "artifactkeeper_repository_security" "scanned" {
 ### Optional
 
 - `block_on_policy_violation` (Boolean) Enforce `severity_threshold` on the proxy scan gate. `false` (the default) does not mean "don't block": the gate then blocks on any finding. Use `proxy_scan_action = "record_only"` to scan without blocking.
+- `instance_locked` (Boolean) Whether repository administrators are locked out of weakening the proxy scan policy (Artifact Keeper 1.12.0, #4363): turning `scan_on_proxy` off, moving `proxy_scan_action` towards `record_only` or loosening `severity_threshold`. `false` hands the policy back to them. Only an instance administrator may set it, and a write from one that omits it locks the policy.
 - `proxy_scan_action` (String) How the inline proxy scan gate treats a pull: `fail_open` (default, serve the artifact while a scan cannot run), `fail_closed` (refuse it), or `record_only` (scan and record every pull but never block; overrides `block_on_policy_violation` and `severity_threshold`, requires Artifact Keeper 1.11.0).
 - `scan_enabled` (Boolean) Whether vulnerability scanning is enabled for the repository.
 - `scan_on_proxy` (Boolean) Scan artifacts fetched through a proxy (remote repositories).

@@ -29,10 +29,11 @@ type ageGateResource struct {
 }
 
 type ageGateResourceModel struct {
-	RepositoryKey types.String `tfsdk:"repository_key"`
-	Enabled       types.Bool   `tfsdk:"enabled"`
-	MinAgeDays    types.Int64  `tfsdk:"min_age_days"`
-	Mode          types.String `tfsdk:"mode"`
+	RepositoryKey  types.String `tfsdk:"repository_key"`
+	Enabled        types.Bool   `tfsdk:"enabled"`
+	MinAgeDays     types.Int64  `tfsdk:"min_age_days"`
+	Mode           types.String `tfsdk:"mode"`
+	InstanceLocked types.Bool   `tfsdk:"instance_locked"`
 }
 
 func (r *ageGateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -68,6 +69,12 @@ func (r *ageGateResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"the mode: npm and pypi support both, go supports `first_seen` only.",
 				Validators: []validator.String{stringvalidator.OneOf("upstream_publish_time", "first_seen")},
 			},
+			"instance_locked": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				MarkdownDescription: "Whether repository administrators are locked out of relaxing this policy (Artifact Keeper 1.12.0, #4238): `true` lets them only tighten it, `false` hands it back to them. " +
+					"Only an instance administrator may set it, and a write from one that omits it locks the policy.",
+			},
 		},
 	}
 }
@@ -86,9 +93,10 @@ func (r *ageGateResource) Create(ctx context.Context, req resource.CreateRequest
 	// No create endpoint: the gate config always exists on a remote repo. The
 	// PUT establishes the managed configuration.
 	cfg, err := r.client.UpdateAgeGateConfig(ctx, plan.RepositoryKey.ValueString(), client.AgeGateConfigRequest{
-		Enabled:    plan.Enabled.ValueBool(),
-		MinAgeDays: plan.MinAgeDays.ValueInt64(),
-		Mode:       optionalString(plan.Mode),
+		Enabled:        plan.Enabled.ValueBool(),
+		MinAgeDays:     plan.MinAgeDays.ValueInt64(),
+		Mode:           optionalString(plan.Mode),
+		InstanceLocked: optionalBool(plan.InstanceLocked),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error configuring age gate", err.Error())
@@ -126,9 +134,10 @@ func (r *ageGateResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	cfg, err := r.client.UpdateAgeGateConfig(ctx, plan.RepositoryKey.ValueString(), client.AgeGateConfigRequest{
-		Enabled:    plan.Enabled.ValueBool(),
-		MinAgeDays: plan.MinAgeDays.ValueInt64(),
-		Mode:       optionalString(plan.Mode),
+		Enabled:        plan.Enabled.ValueBool(),
+		MinAgeDays:     plan.MinAgeDays.ValueInt64(),
+		Mode:           optionalString(plan.Mode),
+		InstanceLocked: optionalBool(plan.InstanceLocked),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating age gate", err.Error())
@@ -163,9 +172,10 @@ func (r *ageGateResource) ImportState(ctx context.Context, req resource.ImportSt
 
 func ageGateToModel(c *client.AgeGateConfig) ageGateResourceModel {
 	return ageGateResourceModel{
-		RepositoryKey: types.StringValue(c.RepositoryKey),
-		Enabled:       types.BoolValue(c.Enabled),
-		MinAgeDays:    types.Int64Value(c.MinAgeDays),
-		Mode:          types.StringValue(c.Mode),
+		RepositoryKey:  types.StringValue(c.RepositoryKey),
+		Enabled:        types.BoolValue(c.Enabled),
+		MinAgeDays:     types.Int64Value(c.MinAgeDays),
+		Mode:           types.StringValue(c.Mode),
+		InstanceLocked: types.BoolValue(c.InstanceLocked),
 	}
 }

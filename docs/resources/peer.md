@@ -45,6 +45,7 @@ variable "peer_api_key" {
 - `api_key_wo_version` (Number) Change this to send `api_key_wo` again, the write-only value itself is not compared between runs. Changing it forces a new resource, like `api_key`.
 - `cache_size_bytes` (Number) Cache capacity in bytes. Defaults to 10 GiB.
 - `region` (String) Optional region identifier.
+- `sync_filter` (String) JSON object limiting what this peer syncs, for example `jsonencode({ formats = ["maven", "npm"] })`. Set at registration only and never returned by the API, so changing it registers the peer again.
 
 ### Read-Only
 

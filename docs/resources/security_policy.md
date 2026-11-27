@@ -47,6 +47,7 @@ resource "artifactkeeper_security_policy" "docker_release" {
 
 ### Optional
 
+- `block_uncataloged` (Boolean) Block an artifact no scanner could catalog (`scan_completeness = not_cataloged`): its zero findings mean nothing was assessed, not clean (Artifact Keeper 1.12.0, #4994). Defaults to `false`.
 - `block_unscanned` (Boolean) Block artifacts that have not been scanned. Defaults to `true`.
 - `is_enabled` (Boolean) Whether the policy is active. Not settable at creation (the API enables new policies by default); a value set here is applied via a follow-up update.
 - `max_artifact_age_days` (Number) Maximum age in days for a promotable artifact. The API cannot clear this back to unset once written; remove the policy to reset it.

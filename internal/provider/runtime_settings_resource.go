@@ -3,10 +3,13 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -29,11 +32,15 @@ type runtimeSettingsResource struct {
 }
 
 type runtimeSettingsResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	GuestAccessEnabled  types.Bool   `tfsdk:"guest_access_enabled"`
-	GuestAccessSource   types.String `tfsdk:"guest_access_source"`
-	GuestAccessEditable types.Bool   `tfsdk:"guest_access_editable"`
-	GuestAccessInForce  types.Bool   `tfsdk:"guest_access_in_force"`
+	ID                    types.String `tfsdk:"id"`
+	GuestAccessEnabled    types.Bool   `tfsdk:"guest_access_enabled"`
+	GuestAccessSource     types.String `tfsdk:"guest_access_source"`
+	GuestAccessEditable   types.Bool   `tfsdk:"guest_access_editable"`
+	GuestAccessInForce    types.Bool   `tfsdk:"guest_access_in_force"`
+	HiddenNavItems        types.Set    `tfsdk:"hidden_nav_items"`
+	UpstreamJobsPaused    types.Bool   `tfsdk:"upstream_jobs_paused"`
+	UpstreamPausedSource  types.String `tfsdk:"upstream_jobs_paused_source"`
+	UpstreamPausedInForce types.Bool   `tfsdk:"upstream_jobs_paused_in_force"`
 }
 
 func (r *runtimeSettingsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -67,6 +74,27 @@ func (r *runtimeSettingsResource) Schema(_ context.Context, _ resource.SchemaReq
 				Computed:            true,
 				MarkdownDescription: "The value the server enforces right now, which differs from `guest_access_enabled` while the environment pins it.",
 			},
+			"hidden_nav_items": schema.SetAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Web UI navigation entries hidden for every user, as route paths such as `/peers` (Artifact Keeper 1.12.0, #4574). Display only: a hidden page stays reachable by URL and keeps its permission checks. Each entry is 1 to 128 characters of ASCII letters, digits, `/`, `-`, `_` or `.`, at most 200. An empty set shows every entry; left unset, the server's list is kept.",
+				PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+			},
+			"upstream_jobs_paused": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Pause (`true`) or resume (`false`) every scheduled job that contacts an upstream on its own: curation sync, environment re-evaluation, the npm replication feed, peer replication transfers and scheduled mirror passes (Artifact Keeper 1.12.0, #5288). `UPSTREAM_JOBS_PAUSED=true` keeps them paused whatever is stored. Left unset, the stored value is kept.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+			},
+			"upstream_jobs_paused_source": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Where the pause in force comes from: `environment`, `database`, `default` or `unavailable` (the setting could not be read, jobs are treated as paused).",
+			},
+			"upstream_jobs_paused_in_force": schema.BoolAttribute{
+				Computed:            true,
+				MarkdownDescription: "Whether upstream jobs are paused right now, which differs from `upstream_jobs_paused` while the environment pins it.",
+			},
 		},
 	}
 }
@@ -82,14 +110,19 @@ func (r *runtimeSettingsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 	// Singleton, no create endpoint: PATCH then store what it echoes back.
-	s, err := r.client.UpdateRuntimeSettings(ctx, client.UpdateRuntimeSettingsRequest{
-		GuestAccessEnabled: plan.GuestAccessEnabled.ValueBoolPointer(),
-	})
+	body, diags := runtimeSettingsRequest(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	s, err := r.client.UpdateRuntimeSettings(ctx, body)
 	if err != nil {
 		resp.Diagnostics.AddError("Error configuring runtime settings", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, runtimeSettingsToModel(s))...)
+	m, diags := runtimeSettingsToModel(ctx, s)
+	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, m)...)
 }
 
 func (r *runtimeSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -99,7 +132,9 @@ func (r *runtimeSettingsResource) Read(ctx context.Context, req resource.ReadReq
 		resp.Diagnostics.AddError("Error reading runtime settings", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, runtimeSettingsToModel(s))...)
+	m, diags := runtimeSettingsToModel(ctx, s)
+	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, m)...)
 }
 
 func (r *runtimeSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -108,14 +143,19 @@ func (r *runtimeSettingsResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	s, err := r.client.UpdateRuntimeSettings(ctx, client.UpdateRuntimeSettingsRequest{
-		GuestAccessEnabled: plan.GuestAccessEnabled.ValueBoolPointer(),
-	})
+	body, diags := runtimeSettingsRequest(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	s, err := r.client.UpdateRuntimeSettings(ctx, body)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating runtime settings", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, runtimeSettingsToModel(s))...)
+	m, diags := runtimeSettingsToModel(ctx, s)
+	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, m)...)
 }
 
 // Delete is a no-op: reopening anonymous access on destroy would be a silent
@@ -127,18 +167,49 @@ func (r *runtimeSettingsResource) ImportState(ctx context.Context, req resource.
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// runtimeSettingsToModel reads back the STORED value as the configured one, so
-// an environment pin does not show up as drift.
-func runtimeSettingsToModel(s *client.RuntimeSettings) runtimeSettingsResourceModel {
+// runtimeSettingsRequest sends only what the config sets, so an unset
+// attribute leaves the server's value alone
+func runtimeSettingsRequest(ctx context.Context, plan runtimeSettingsResourceModel) (client.UpdateRuntimeSettingsRequest, diag.Diagnostics) {
+	body := client.UpdateRuntimeSettingsRequest{
+		GuestAccessEnabled: plan.GuestAccessEnabled.ValueBoolPointer(),
+		UpstreamJobsPaused: optionalBool(plan.UpstreamJobsPaused),
+	}
+	if plan.HiddenNavItems.IsNull() || plan.HiddenNavItems.IsUnknown() {
+		return body, nil
+	}
+	items, diags := setToStringSlice(ctx, plan.HiddenNavItems)
+	if items == nil {
+		items = []string{}
+	}
+	body.HiddenNavItems = &items
+	return body, diags
+}
+
+// runtimeSettingsToModel reads back the STORED values as the configured ones,
+// so an environment pin does not show up as drift.
+func runtimeSettingsToModel(ctx context.Context, s *client.RuntimeSettings) (runtimeSettingsResourceModel, diag.Diagnostics) {
 	configured := s.GuestAccessEnabled
 	if s.GuestAccessStored != nil {
 		configured = *s.GuestAccessStored
 	}
-	return runtimeSettingsResourceModel{
-		ID:                  types.StringValue(runtimeSettingsID),
-		GuestAccessEnabled:  types.BoolValue(configured),
-		GuestAccessSource:   types.StringValue(s.GuestAccessSource),
-		GuestAccessEditable: types.BoolValue(s.GuestAccessEditable),
-		GuestAccessInForce:  types.BoolValue(s.GuestAccessEnabled),
+	paused := s.UpstreamJobsPaused
+	if s.UpstreamJobsPausedStored != nil {
+		paused = *s.UpstreamJobsPausedStored
 	}
+	items := s.HiddenNavItems
+	if items == nil {
+		items = []string{}
+	}
+	hidden, diags := types.SetValueFrom(ctx, types.StringType, items)
+	return runtimeSettingsResourceModel{
+		ID:                    types.StringValue(runtimeSettingsID),
+		GuestAccessEnabled:    types.BoolValue(configured),
+		GuestAccessSource:     types.StringValue(s.GuestAccessSource),
+		GuestAccessEditable:   types.BoolValue(s.GuestAccessEditable),
+		GuestAccessInForce:    types.BoolValue(s.GuestAccessEnabled),
+		HiddenNavItems:        hidden,
+		UpstreamJobsPaused:    types.BoolValue(paused),
+		UpstreamPausedSource:  types.StringValue(s.UpstreamJobsPausedSource),
+		UpstreamPausedInForce: types.BoolValue(s.UpstreamJobsPaused),
+	}, diags
 }

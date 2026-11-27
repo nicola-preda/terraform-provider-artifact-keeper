@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -35,6 +36,7 @@ type peerResourceModel struct {
 	EndpointURL     types.String `tfsdk:"endpoint_url"`
 	Region          types.String `tfsdk:"region"`
 	CacheSizeBytes  types.Int64  `tfsdk:"cache_size_bytes"`
+	SyncFilter      types.String `tfsdk:"sync_filter"`
 	APIKey          types.String `tfsdk:"api_key"`
 	APIKeyWo        types.String `tfsdk:"api_key_wo"`
 	APIKeyWoVersion types.Int64  `tfsdk:"api_key_wo_version"`
@@ -87,6 +89,11 @@ func (r *peerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Validators:          []validator.String{stringvalidator.ExactlyOneOf(path.MatchRoot("api_key_wo"))},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
+			"sync_filter": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "JSON object limiting what this peer syncs, for example `jsonencode({ formats = [\"maven\", \"npm\"] })`. Set at registration only and never returned by the API, so changing it registers the peer again.",
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
 			"api_key_wo":         apiKeyWo,
 			"api_key_wo_version": apiKeyWoVersion,
 			"status":             schema.StringAttribute{Computed: true, MarkdownDescription: "online, offline, syncing, or degraded."},
@@ -120,6 +127,9 @@ func (r *peerResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Name:        plan.Name.ValueString(),
 		EndpointURL: plan.EndpointURL.ValueString(),
 	}
+	if !plan.SyncFilter.IsNull() && !plan.SyncFilter.IsUnknown() {
+		createReq.SyncFilter = json.RawMessage(plan.SyncFilter.ValueString())
+	}
 	if apiKey := secretValue(ctx, req.Config, plan.APIKey, "api_key_wo", &resp.Diagnostics); apiKey != nil {
 		createReq.APIKey = *apiKey
 	}
@@ -141,6 +151,7 @@ func (r *peerResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	state := peerToModel(peer)
 	state.APIKey = plan.APIKey // API never returns it; preserved from config
+	state.SyncFilter = plan.SyncFilter
 	state.APIKeyWoVersion = plan.APIKeyWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
@@ -164,6 +175,7 @@ func (r *peerResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	refreshed := peerToModel(peer)
 	refreshed.APIKey = state.APIKey // preserved; never returned by the API
+	refreshed.SyncFilter = state.SyncFilter
 	refreshed.APIKeyWoVersion = state.APIKeyWoVersion
 	resp.Diagnostics.Append(resp.State.Set(ctx, refreshed)...)
 }
