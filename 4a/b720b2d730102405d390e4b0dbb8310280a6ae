@@ -66,6 +66,20 @@ internal/provider/user_api_token_resource.go
       "human_author": "Nicola Preda <nicola.preda@proton.ch>"
     }
   },
+  "commit_stats": {
+    "human_additions": 0,
+    "unknown_additions": 0,
+    "ai_additions": 551,
+    "ai_accepted": 551,
+    "git_diff_deleted_lines": 200,
+    "git_diff_added_lines": 551,
+    "tool_model_breakdown": {
+      "claude::claude-opus-5-5": {
+        "ai_additions": 551,
+        "ai_accepted": 551
+      }
+    }
+  },
   "token_usage": {
     "attributable": {
       "total": {
@@ -95,6 +109,10 @@ internal/provider/user_api_token_resource.go
         "cache_read_input_tokens": 15925843
       }
     }
+  },
+  "activity": {
+    "added_sloc": 130,
+    "checkpoints": 1
   },
   "proton_build": "1.7.6-proton.8"
 }
